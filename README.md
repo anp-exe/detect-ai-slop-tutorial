@@ -15,7 +15,7 @@
 
 # Introduction
 
-![img_4.png](img_4.png)
+![slop.gif](slop.gif)
 
 Are you sick of reading AI slop on LinkedIn? The "I got rejected 100 times. Then everything changed 👇" broetry, the buzzword soup, the "Agree?" bait?
 
