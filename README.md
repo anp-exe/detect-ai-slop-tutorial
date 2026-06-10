@@ -131,7 +131,7 @@ What each signal catches:
 
 These are *transparent*, you can see exactly why a post scored high, which makes the result feel fair (and funny).
 
-> 📸 *Screenshot: print rule_signals() on a real post.*
+>![img_6.png](img_6.png)
 
 ---
 
@@ -162,7 +162,7 @@ How **zero-shot classification** works: the model was trained to judge whether o
 
 > 💡 **First-run tip:** free HF models "sleep" when idle, so your very first request might take ~20 seconds while it wakes up. Just run it again, after that it's fast.
 
-> 📸 *Screenshot: the raw Hugging Face response showing the labels + scores.*
+> ![img_7.png](img_7.png)
 
 ---
 
@@ -232,9 +232,10 @@ And there's your score:
   Slop Score: 88/100  —  Certified Artisanal Slop 🥫
 ```
 
-Try it on a few posts from your feed, the worse the post, the higher the score. 😈 To score a different post, just swap the text between the `"""` triple quotes.
+Try it on a few posts from your feed, the worse the post, the higher the score. To score a different post, just swap 
+the text between the `"""` triple quotes.
 
-> 📸 *Screenshot: the terminal showing a Slop Score.*
+> ![img_8.png](img_8.png)
 
 ---
 
@@ -266,28 +267,27 @@ Run `slop.py` again, and a `slop_card.png` appears in your folder, your shareabl
 
 > 💡 **Want to peek inside `card.py`?** Go for it! It uses Pillow to draw a gradient, a circular score meter (with `arc`), rounded corners (with a mask), and the colour emoji. It's a great file to study once you've got the main project working.
 
----
-
-## Level Up!
-
-- **More signals:** detect the "🧵 thread" opener, ALL CAPS WORDS, or the classic "Let that sink in."
-- **Roast mode:** feed the post to a text-generation model for a one-line roast.
-- **Browser extension:** score posts right in your LinkedIn feed.
-- **Leaderboard:** save the sloppiest posts your friends submit.
-- **Web app:** wrap it in Streamlit so anyone can paste and score.
-
----
 
 ## Conclusion
 
-You just built an **AI Slop Detector**! You learned how to:
+You did it!
+
+You learned how to:
 
 - Use the **Hugging Face Inference API** with **zero-shot classification** (invent your own labels, no training!)
 - Combine **AI judgment with transparent rule-based heuristics**, a genuinely useful real-world pattern
 - Keep your API token safe with a `.env` file
 - Turn a result into a polished, shareable card
 
-And you did it!
+---
+
+## What Next?
+
+- **More signals:** detect the "🧵 thread" opener, ALL CAPS WORDS, or the classic "Let that sink in."
+- **Browser extension:** score posts right in your LinkedIn feed.
+- **Leaderboard:** save the sloppiest posts your friends submit.
+- **Web app:** wrap it in Streamlit so anyone can paste and score.
+
 ---
 
 ## More Resources
