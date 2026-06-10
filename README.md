@@ -19,7 +19,7 @@
 
 Are you sick of reading AI slop on LinkedIn? The "I got rejected 100 times. Then everything changed 👇" broetry, the buzzword soup, the "Agree?" bait?
 
-This tool reads any post and gives it a **Slop Score /100**, with a verdict and a breakdown of its biggest offenses, then saves it all as a shareable card.
+This tool reads any post and gives it a **Slop Score /100**, with a verdict and a breakdown of its biggest offenses then saves it all as a shareable card.
 
 <img src="img.png" width="450">
 
@@ -27,8 +27,6 @@ This tool reads any post and gives it a **Slop Score /100**, with a verdict and 
 > it wrong. So instead of faking that, we measure how much a post reeks of the **AI-slop *style***: the broetry, the buzzwords, the engagement bait.
 
 In this tutorial you'll learn how to use the **Hugging Face API**!
-
-<img src="img_1.png" width="450">
 
 # What is Hugging Face? 🤗
 
@@ -64,6 +62,9 @@ Hugging Face's **Inference API** lets us run AI models with a simple web request
 1. Make a free account at [huggingface.co](https://huggingface.co).
 2. Go to **Settings → Access Tokens → New token** (a "Read" token is fine).
 3. Copy it (it starts with `hf_`).
+
+You should see something like this:
+![img_5.png](img_5.png)
 
 > ⚠️ Treat it like a password. Never paste it into your code or commit it to GitHub.
 
@@ -277,7 +278,7 @@ Run `slop.py` again, and a `slop_card.png` appears in your folder, your shareabl
 
 ---
 
-## Finally
+## Conclusion
 
 You just built an **AI Slop Detector**! You learned how to:
 
