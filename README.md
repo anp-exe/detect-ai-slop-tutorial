@@ -1,4 +1,4 @@
-<img src="header.png" width="60%">
+<img src="imges/header.png" width="60%">
 
 # Build an AI Slop Detector with the Hugging Face API
 
@@ -6,7 +6,7 @@
 >
 > **by Anna** ([@anp-exe](https://www.codedex.io/@anp-exe)) ·
 >
-> 60 min read
+> 50 min read
 >
 > |                   |                                        |
 > |-------------------|----------------------------------------|
@@ -15,17 +15,17 @@
 
 ## Introduction
 
-![slop.gif](slop.gif)
+![slop.gif](imges/slop.gif)
 
 Are you sick of reading AI slop on LinkedIn? The "I got rejected 100 times. Then everything changed 👇" broetry, the buzzword soup, the "Agree?" bait?
 
 In this tutorial, we'll build a tool that reads any post and gives it a **Slop Score /100**, complete with a verdict and a breakdown of its biggest offenses. Then it saves the whole thing as a shareable card.
 
-<img src="img.png" width="450">
+<img src="imges/img.png" width="450">
 
 > **A quick note:** truly detecting whether an AI *wrote* something is famously unreliable. Even the paid tools get it wrong. So instead of faking that, we'll measure how much a post reeks of the **AI-slop *style***: the broetry, the buzzwords, the engagement bait.
 
-Along the way, you'll learn how to use the **Hugging Face API**!
+Along the way, you'll learn how to use the **Hugging Face API** for **zero-shot text classification**, and how to blend AI judgment with your own transparent rules.
 
 ## What is Hugging Face? 🤗
 
@@ -62,7 +62,7 @@ Hugging Face's **Inference API** lets us run AI models with a simple web request
 
 You should see something like this:
 
-![img_5.png](img_5.png)
+![img_5.png](imges/img_5.png)
 
 > ⚠️ Treat your token like a password. Never paste it into your code or commit it to GitHub.
 
@@ -92,12 +92,12 @@ First, the phrases we're hunting for:
 
 ```python
 BUZZWORDS = ["humbled", "thrilled to announce", "excited to share",
-    "game-changer", "synergy", "leverage", "move the needle",
-    "thought leader", "disrupt", "growth mindset", "deep dive",
-    "grateful", "blessed", "unpopular opinion"]
+             "game-changer", "synergy", "leverage", "move the needle",
+             "thought leader", "disrupt", "growth mindset", "deep dive",
+             "grateful", "blessed", "unpopular opinion"]
 
 CLOSERS = ["agree?", "thoughts?", "who's with me", "comment below",
-    "what do you think", "repost if"]
+           "what do you think", "repost if"]
 ```
 
 Next, a tiny helper that counts how many times any phrase from a list shows up in the text:
@@ -150,7 +150,12 @@ Each signal is capped with `min()` so one offense can't max out the score on its
 
 These signals are *transparent*: you can see exactly why a post scored high, which makes the result feel fair (and funny).
 
-> ![img_6.png](img_6.png)
+```
+{'broetry': 0.71, 'buzzwords': 7, 'closers': 1, 'emoji_bullets': 0, 'hashtags': 3, 'rule_subscore': 42}
+  Saved your card to slop_card.png 🥫
+
+Process finished with exit code 0
+```
 
 ## Step 2: Bring in the AI (Hugging Face Zero-Shot)
 
@@ -188,7 +193,9 @@ So how does **zero-shot classification** work? The model was trained to judge wh
 
 > 💡 **First-run tip:** free Hugging Face models "sleep" when idle, so your very first request might take ~20 seconds while the model wakes up. Just run it again. After that it's fast.
 
-> ![img_7.png](img_7.png)
+```
+[{'label': 'humble authentic personal story', 'score': 0.981020987033844}, {'label': 'performative self-promotional corporate content', 'score': 0.01897900365293026}]
+```
 
 ## Step 3: Combine into a Slop Score
 
@@ -256,7 +263,12 @@ And there's your score:
 
 Try it on a few posts from your feed. The worse the post, the higher the score. To score a different post, just swap the text between the `"""` triple quotes.
 
-> ![img_8.png](img_8.png)
+```
+  Slop Score: 43/100  —  Mildly Insufferable 😬
+  Saved your card to slop_card.png 🥫
+
+Process finished with exit code 0
+```
 
 ## Step 5: Your Reward, a Shareable Card
 
@@ -277,7 +289,7 @@ And two lines at the end of your `main()`:
 
 ```python
     make_card(score, sig)
-    print("  Saved your card to slop_card.png 🥫\n")
+print("  Saved your card to slop_card.png 🥫\n")
 ```
 
 Run **slop.py** again, and a **slop_card.png** appears in your folder: your shareable Slop Score card, ready to post. 🎉

@@ -1,8 +1,3 @@
-"""
-LinkedIn Slop Detector — paste a post, get a Slop Score.
-Powered by the Hugging Face API (zero-shot classification) + simple rule signals.
-"""
-
 import os
 import re
 import requests
