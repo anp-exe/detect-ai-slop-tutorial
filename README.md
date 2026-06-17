@@ -19,9 +19,7 @@
 
 Are you sick of reading AI slop on LinkedIn? The "I got rejected 100 times. Then everything changed 👇" broetry, the buzzword soup, the "Agree?" bait?
 
-In this tutorial we'll build a tool that gives any post a **Slop Score /100** with a verdict, then saves it as a shareable card.
-
-> **A quick note:** truly detecting whether an AI *wrote* something is famously unreliable, even the paid tools get it wrong. So instead we'll measure how much a post reeks of the **AI-slop *style***: the broetry, buzzwords, and engagement bait.
+In this tutorial we'll build a tool that gives any post a **Slop Score /100** with a verdict then saves it as a shareable card.
 
 Along the way you'll learn how to use the **Hugging Face API** for **zero-shot text classification**, and how to blend AI judgment with your own transparent rules.
 
@@ -135,7 +133,7 @@ BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
 CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
 ```
 
-These are the phrases that show up in basically every cringe LinkedIn post.
+These are the phrases that show up in a lot of slop posts.
 
 ## Add a helper to count phrases
 
@@ -273,7 +271,7 @@ If you keep this innovation up you'll be detecting slop across the entire intern
 
 ## What Next?
 
-- **More signals:** detect the "🧵 thread" opener or ALL CAPS WORDS.
+- **More signals:** detect the "thread" opener or ALL CAPS WORDS.
 - **Browser extension:** score posts right in your LinkedIn feed.
 - **Web app:** wrap it in Streamlit so anyone can paste and score.
 
