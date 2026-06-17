@@ -1,4 +1,6 @@
-<img src="header.png" width="60%">
+<p align="center">
+  <img src="imges/header.png" width="50%">
+</p>
 
 # Build an AI Slop Detector with the Hugging Face API
 
@@ -6,7 +8,7 @@
 >
 > **by Anna** ([@anp-exe](https://www.codedex.io/@anp-exe)) ·
 >
-> 45 min read
+> 50 min read
 >
 > |                   |                                        |
 > |-------------------|----------------------------------------|
@@ -15,158 +17,98 @@
 
 ## Introduction
 
-![slop.gif](slop.gif)
-
 Are you sick of reading AI slop on LinkedIn? The "I got rejected 100 times. Then everything changed 👇" broetry, the buzzword soup, the "Agree?" bait?
 
-In this tutorial, we'll build a tool that gives any post a **Slop Score /100** with a verdict, then saves it as a shareable card.
-
-<img src="img.png" width="450">
+In this tutorial we'll build a tool that gives any post a **Slop Score /100** with a verdict, then saves it as a shareable card.
 
 > **A quick note:** truly detecting whether an AI *wrote* something is famously unreliable, even the paid tools get it wrong. So instead we'll measure how much a post reeks of the **AI-slop *style***: the broetry, buzzwords, and engagement bait.
 
-Along the way you'll learn the **Hugging Face API** for **zero-shot text classification**, and how to blend AI judgment with your own transparent rules.
+Along the way you'll learn how to use the **Hugging Face API** for **zero-shot text classification**, and how to blend AI judgment with your own transparent rules.
+
+<img src="imges/img.png" width="300">
 
 ## What is Hugging Face? 🤗
 
-Hugging Face is a platform for machine learning models. It offers tons of pre-trained models for tasks like text classification and sentiment analysis, all callable through a simple API with just a few lines of Python.
+Hugging Face is a community and platform that hosts a bunch of open source machine learning models, datasets, and more. It offers pre-trained models for tasks like text classification and sentiment analysis, all callable through a simple API with just a few lines of Python.
 
-## What We're Building
-
-1. **Rule signals**: functions that sniff out broetry, buzzwords, and bait.
-2. **Hugging Face**: a zero-shot model that scores how "performative" a post feels.
-3. **A Slop Score**: both halves combined into one number with a verdict.
-4. **A reward**: a card generator that turns your score into a shareable image. 🥫
+Let's get started! 🥫
 
 ## Setting Up
 
-We'll need [Python 3](https://www.python.org/downloads/) and [pip](https://pip.pypa.io/en/stable/). Create a file called **slop.py**, then install three packages:
+Create a new directory named `slop-detector`. This is where our project will live. Then enter the directory in your terminal:
 
 ```bash
-pip install requests Pillow python-dotenv
+cd slop-detector
 ```
 
-`requests` talks to Hugging Face, `Pillow` draws the card, and `python-dotenv` keeps your token safe.
+## Create the Virtual Environment
+
+Let's create a virtual environment, or venv, which is an isolated environment that contains a Python installation alongside our packages:
+
+```bash
+python3 -m venv .venv
+```
+
+Now activate it:
+
+```bash
+source .venv/bin/activate
+```
+
+## Install Requests
+
+First we install `requests`, a library to handle HTTP requests. This is what talks to the Hugging Face API.
+
+```bash
+pip install requests
+```
+
+## Install Dotenv
+
+Next we install `python-dotenv`, which loads environment variables from a file so we can keep our API token out of the code.
+
+```bash
+pip install python-dotenv
+```
+
+## Install Pillow
+
+Finally we install `Pillow`, the imaging library we'll use at the end to draw a shareable score card.
+
+```bash
+pip install Pillow
+```
 
 ## Getting a Hugging Face Token
 
-The **Inference API** runs AI models with a simple web request. No GPU, no downloads. Just grab a free token:
+The **Inference API** runs AI models with a simple web request. No GPU, no downloads. We just need a free token:
 
 1. Make a free account at [huggingface.co](https://huggingface.co).
 2. Go to **Settings → Access Tokens → New token** (a "Read" token is fine).
 3. Copy it (it starts with `hf_`).
 
-![img_5.png](img_5.png)
+![img_9.png](imges/img_9.png)
+> Read-only tokens are enough for this project. You don't need to pay for anything.
 
 > ⚠️ Treat your token like a password. Never paste it into your code or commit it to GitHub.
 
-Create a file called `.env` and add your token on one line, no quotes:
+## Create an .env file
+
+Create a file called `.env` at the root of the project. This is where we place our token, on one line, no quotes:
 
 ```
 HF_TOKEN=hf_your_token_here
 ```
 
-Then load it at the top of **slop.py**:
-
-```python
-from dotenv import load_dotenv
-load_dotenv()
-HF_TOKEN = os.environ.get("HF_TOKEN")
-```
-
 > 💡 Add `.env` to your `.gitignore` so your token never reaches GitHub. Secrets live in `.env`, never in the code.
 
-## Step 1: Sniff Out the Slop (Rule Signals)
+## Create the project file
 
-A lot of slop is detectable with simple patterns before we even touch AI. Start with the phrases we're hunting for:
+At the root of the folder, create a file called `slop.py`. We'll build it up piece by piece, then see the whole thing at the end.
 
-```python
-BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
-    "thought leader", "grateful", "blessed", "move the needle"]
-CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
-```
+## Import the libraries and load the token
 
-A one-liner helper counts how many of those phrases appear:
-
-```python
-def count_hits(text, phrases):
-    return sum(text.lower().count(phrase) for phrase in phrases)
-```
-
-Now the scoring function. First, **broetry**, the fraction of lines that are tiny one-liners (the signature LinkedIn format):
-
-```python
-    lines = [l.strip() for l in text.splitlines() if l.strip()]
-    short = sum(1 for l in lines if len(l.split()) <= 5)
-    broetry = short / len(lines) if lines else 0
-```
-
-Then **emoji bullets**, using a neat trick: `isascii()` is `False` for emoji, so a line *starting* with one is almost certainly a ✨ decorative ✨ bullet:
-
-```python
-    emoji_bullets = sum(1 for l in lines if not l[0].isascii())
-```
-
-Finally we add up every signal, each capped with `min()` so no single offense can max out the score on its own:
-
-```python
-    score = min(20, broetry * 28)
-    score += min(14, count_hits(text, BUZZWORDS) * 4)
-    score += min(10, count_hits(text, CLOSERS) * 6)
-    score += min(8, emoji_bullets * 2)
-    score += min(8, max(0, text.count("#") - 2) * 2)
-```
-
-These signals are *transparent*: you can see exactly why a post scored high, which makes the result feel fair (and funny). The full function is in the assembled file at the end.
-
-## Step 2: Bring in the AI (Hugging Face Zero-Shot)
-
-Rules only go so far. To catch the *overall vibe* we'll use a **zero-shot classifier**: a model that sorts text into labels *we invent on the spot*, no training needed.
-
-We invent two labels and `POST` the post text to the model:
-
-```python
-labels = ["humble authentic personal story",
-          "performative self-promotional corporate content"]
-payload = {"inputs": text, "parameters": {"candidate_labels": labels}}
-```
-
-The model returns a probability for each label, and we pull out the "performative" one (a number from 0 to 1):
-
-```python
-data = response.json()
-scores = {item["label"]: item["score"] for item in data}
-return scores.get("performative self-promotional corporate content", 0.0)
-```
-
-How does it work? The model was trained to judge whether one sentence *implies* another. We exploit that by effectively asking "does this post imply the label 'performative content'?" That's the magic.
-
-> 💡 **First-run tip:** free models "sleep" when idle, so your first request might take ~20 seconds while the model wakes up. Just run it again.
-
-## Step 3: Combine into a Slop Score
-
-Now we blend the two halves: the rule subscore (0 to 60) plus the AI's probability scaled to 0 to 40.
-
-```python
-score = round(min(100, rule_subscore + hf * 40))
-```
-
-Then map the number to a verdict:
-
-```python
-def verdict(score):
-    if score >= 80: return "Certified Artisanal Slop 🥫"
-    if score >= 60: return "Peak LinkedIn Cringe 💼"
-    if score >= 40: return "Mildly Insufferable 😬"
-    if score >= 20: return "Suspiciously Normal 🤔"
-    return "An Actual Human Wrote This 😮"
-```
-
-Splitting the score this way is deliberate: if the AI is unsure, the transparent rules still ground the result, and vice versa. A genuinely useful pattern for any "AI + heuristics" project.
-
-## Step 4: Put It All Together
-
-Here's the complete **slop.py**. Paste the post you want to score between the triple quotes:
+We're using `requests` to call the API, plus a couple of built-in libraries. We load the token from `.env` and point at our model: `facebook/bart-large-mnli`, a zero-shot classifier.
 
 ```python
 import os, requests
@@ -174,17 +116,39 @@ from dotenv import load_dotenv
 
 load_dotenv()
 HF_TOKEN = os.environ.get("HF_TOKEN")
+HF_URL = "https://router.huggingface.co/hf-inference/models/facebook/bart-large-mnli"
+```
 
-HF_MODEL = "facebook/bart-large-mnli"
-HF_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
+`load_dotenv()` reads the `.env` file, then `os.environ.get("HF_TOKEN")` pulls out our token.
 
+## Add the phrases we're hunting for
+
+A lot of slop is detectable with simple patterns before we even touch AI. Let's list the classic tells: buzzwords and engagement-bait closers.
+
+```python
 BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
-    "thought leader", "grateful", "blessed", "move the needle"]
+             "thought leader", "grateful", "blessed", "move the needle"]
 CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
+```
 
+These are the phrases that show up in basically every cringe LinkedIn post.
+
+## Add a helper to count phrases
+
+This little function counts how many times any phrase from a list shows up in the text.
+
+```python
 def count_hits(text, phrases):
-    return sum(text.lower().count(phrase) for phrase in phrases)
+    return sum(text.lower().count(p) for p in phrases)
+```
 
+We lowercase the text first so "Synergy" and "synergy" both count, then add up every match.
+
+## Add the rule signals
+
+Now the scoring function. It measures a few signals and turns them into a subscore out of 60.
+
+```python
 def rule_signals(text):
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     short = sum(1 for l in lines if len(l.split()) <= 5)
@@ -196,26 +160,50 @@ def rule_signals(text):
     score += min(10, count_hits(text, CLOSERS) * 6)
     score += min(8, emoji_bullets * 2)
     score += min(8, max(0, text.count("#") - 2) * 2)
-    return round(min(60, score), 1)
+    return min(60, score)
+```
 
+A few things are happening here. **Broetry** is the fraction of lines that are tiny one-liners, the signature LinkedIn format. **Emoji bullets** uses a neat trick: `isascii()` is `False` for emoji, so a line *starting* with one is almost certainly a ✨ decorative ✨ bullet. Each signal is capped with `min()` so no single offense can max out the score on its own. These signals are *transparent*: you can see exactly why a post scored high.
+
+## Query the model
+
+Rules only go so far. To catch the *overall vibe* we'll use a **zero-shot classifier**: a model that sorts text into labels *we invent on the spot*, no training needed. We hand it two labels and pull out the "performative" probability.
+
+```python
 def hf_performative_score(text, token):
     labels = ["humble authentic personal story",
               "performative self-promotional corporate content"]
     payload = {"inputs": text, "parameters": {"candidate_labels": labels}}
-    response = requests.post(HF_URL, headers={"Authorization": f"Bearer {token}"},
-                             json=payload, timeout=30)
-    response.raise_for_status()
-    data = response.json()
-    scores = {item["label"]: item["score"] for item in data}
-    return scores.get("performative self-promotional corporate content", 0.0)
+    r = requests.post(HF_URL, headers={"Authorization": f"Bearer {token}"},
+                      json=payload, timeout=30)
+    r.raise_for_status()
+    scores = {item["label"]: item["score"] for item in r.json()}
+    return scores.get(labels[1], 0.0)
+```
 
+We `POST` the post text plus our two labels, and the model returns a probability for each. We grab the "performative" one (`labels[1]`, a number from 0 to 1). How does it work? The model was trained to judge whether one sentence *implies* another, so we're effectively asking "does this post imply the label 'performative content'?" That's the magic.
+
+> 💡 **First-run tip:** free models "sleep" when idle, so your first request might take ~20 seconds while the model wakes up. Just run it again.
+
+## Add the verdict
+
+Now a function that maps a score to a verdict, so the number means something at a glance.
+
+```python
 def verdict(score):
     if score >= 80: return "Certified Artisanal Slop 🥫"
     if score >= 60: return "Peak LinkedIn Cringe 💼"
     if score >= 40: return "Mildly Insufferable 😬"
-    if score >= 20: return "Suspiciously Normal 🤔"
     return "An Actual Human Wrote This 😮"
+```
 
+Simple thresholds: the higher the score, the worse the verdict.
+
+## Wire it all together
+
+Finally, a `main()` function that runs everything. It guards against a missing token, scores a sample post, blends the two halves (rules out of 60, AI scaled to 40), and prints the result.
+
+```python
 def main():
     if not HF_TOKEN:
         raise SystemExit("No token found. Add HF_TOKEN=hf_... to your .env file.")
@@ -237,7 +225,9 @@ if __name__ == "__main__":
     main()
 ```
 
-Run it:
+Splitting the score this way is deliberate: if the AI is unsure, the transparent rules still ground the result, and vice versa. A genuinely useful pattern for any "AI + heuristics" project. To score a different post, just swap the text between the `"""` triple quotes.
+
+## Run the project
 
 ```bash
 python slop.py
@@ -249,34 +239,31 @@ python slop.py
 
 Try it on posts from your feed. The worse the post, the higher the score.
 
-## Step 5: Your Reward, a Shareable Card
+## Bonus: a shareable card
 
 A terminal score is fun, but you want something to *post*. Grab two files from the project repo and drop them in your folder:
 
-- **`card.py`**: the card generator
+- **[`card.py`](https://github.com/anp-exe/codedex-challenge-v2/blob/main/card.py)**: the card generator
 - **`NotoColorEmoji.ttf`**: the emoji font, so your card looks the same on every computer
 
-Add the import and call `make_card` at the end of `main()`:
+Add the import at the top of `slop.py`, then call `make_card` at the end of `main()`:
 
 ```python
 from card import make_card
 make_card(score, verdict(score))
 ```
 
-Run **slop.py** again and a **slop_card.png** appears in your folder, ready to post. 🎉
+Run `slop.py` again and a `slop_card.png` appears in your folder, ready to post. 🎉
 
-> <img src="slop_card.png" width="400">
+> <img src="imges/slop_card.png" width="400">
 
-> 💡 **Want to peek inside `card.py`?** Go for it. It uses Pillow to draw a gradient, a circular score meter (`arc`), and rounded corners (a mask). A great file to study once the main project works.
+> 💡 **Want to peek inside [`card.py`](https://github.com/anp-exe/codedex-challenge-v2/blob/main/card.py)?** Go for it. It uses Pillow to draw a gradient, a circular score meter (`arc`), and rounded corners (a mask). A great file to study once the main project works.
 
-## Conclusion
+## Final Words
 
-You did it! You learned how to:
+You did it! You learned how to use the **Hugging Face Inference API** with **zero-shot classification** (inventing your own labels, no training!), combine **AI judgment with transparent rules** (a useful real-world pattern), keep your API token safe with a `.env` file, and turn a result into a polished, shareable card.
 
-- Use the **Hugging Face Inference API** with **zero-shot classification** (invent your own labels!)
-- Combine **AI judgment with transparent rules**, a useful real-world pattern
-- Keep your API token safe with a `.env` file
-- Turn a result into a shareable card
+If you keep this innovation up you'll be detecting slop across the entire internet in no time. Thanks for reading!
 
 ## What Next?
 
