@@ -88,9 +88,12 @@ The **Inference API** runs AI models with a simple web request. No GPU, no downl
 3. Copy it (it starts with `hf_`).
 
 ![img_9.png](imges/img_9.png)
+
+> [!NOTE]
 > Read-only tokens are enough for this project. You don't need to pay for anything.
 
-> ⚠️ Treat your token like a password. Never paste it into your code or commit it to GitHub.
+> [!WARNING]
+> Treat your token like a password. Never paste it into your code or commit it to GitHub.
 
 ## Create an .env file
 
@@ -100,7 +103,8 @@ Create a file called `.env` at the root of the project. This is where we place o
 HF_TOKEN=hf_your_token_here
 ```
 
-> 💡 Add `.env` to your `.gitignore` so your token never reaches GitHub. Secrets live in `.env`, never in the code.
+> [!TIP]
+> Add `.env` to your `.gitignore` so your token never reaches GitHub. Secrets live in `.env`, never in the code.
 
 ## Create the project file
 
@@ -183,7 +187,8 @@ def hf_performative_score(text, token):
 
 We `POST` the post text plus our two labels, and the model returns a probability for each. We grab the "performative" one (`labels[1]`, a number from 0 to 1). How does it work? The model was trained to judge whether one sentence *implies* another, so we're effectively asking "does this post imply the label 'performative content'?" That's the magic.
 
-> 💡 **First-run tip:** free models "sleep" when idle, so your first request might take ~20 seconds while the model wakes up. Just run it again.
+> [!TIP]
+> **First-run tip:** free models "sleep" when idle, so your first request might take ~20 seconds while the model wakes up. Just run it again.
 
 ## Add the verdict
 
@@ -257,7 +262,8 @@ Run `slop.py` again and a `slop_card.png` appears in your folder, ready to post.
 
 > <img src="imges/slop_card.png" width="400">
 
-> 💡 **Want to peek inside [`card.py`](https://github.com/anp-exe/codedex-challenge-v2/blob/main/card.py)?** Go for it. It uses Pillow to draw a gradient, a circular score meter (`arc`), and rounded corners (a mask). A great file to study once the main project works.
+> [!TIP]
+> **Want to peek inside [`card.py`](https://github.com/anp-exe/codedex-challenge-v2/blob/main/card.py)?** Go for it. It uses Pillow to draw a gradient, a circular score meter (`arc`), and rounded corners (a mask). A great file to study once the main project works.
 
 ## Final Words
 
