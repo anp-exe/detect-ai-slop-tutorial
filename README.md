@@ -23,7 +23,7 @@ In this tutorial we'll build a tool that gives any post a **Slop Score /100** wi
 
 Along the way you'll learn how to use the **Hugging Face API** for **zero-shot text classification**, and how to blend AI judgment with your own transparent rules.
 
-<img src="imges/img.png" width="300">
+> <img src="imges/img.png" width="300">
 
 ## What is Hugging Face? 🤗
 
@@ -258,7 +258,7 @@ make_card(score, verdict(score))
 
 Run `slop.py` again and a `slop_card.png` appears in your folder, ready to post. 🎉
 
-> <img src="imges/slop_card.png" width="400">
+> <img src="imges/slop_card.png" width="300">
 
 > [!TIP]
 > **Want to peek inside [`card.py`](https://github.com/anp-exe/codedex-challenge-v2/blob/main/card.py)?** Go for it. It uses Pillow to draw a gradient, a circular score meter (`arc`), and rounded corners (a mask). A great file to study once the main project works.
