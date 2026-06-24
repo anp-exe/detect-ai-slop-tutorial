@@ -4,10 +4,13 @@ This repo is for the **Codédex monthly challenge**. The full tutorial can be fo
 <p align="center">
   <img src="images/codedex.gif" width="150">
 </p>
-It's a Python tool that reads any LinkedIn post and gives it a **Slop Score /100** with a verdict, then saves it as a shareable card. Along the way you'll learn to use the **Hugging Face API** for zero-shot text classification and blend AI judgment with your own transparent rules.
+
+It's a Python tool that reads any LinkedIn post and gives it a **Slop Score /100** with a verdict, then saves it as 
+a shareable card. Along the way you'll learn to use the **Hugging Face API** for zero-shot text classification and blend AI judgment with your own transparent rules.
 
 <p align="center">
-  <img src="images/slop-card-example.png" width="300">
+  <img src="images/slop-card-example.png" width="45%">
+  <img src="images/card-human-example.png" width="45%">
 </p>
 
 ## Quick start
