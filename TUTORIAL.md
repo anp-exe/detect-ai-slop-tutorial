@@ -10,7 +10,7 @@
 >
 > |                   |                                        |
 > |-------------------|----------------------------------------|
-> | **PREREQUISITES** | Python fundamentals                    |
+> | **PREREQUISITES** | Python fundamentals, Git & GitHub      |
 > | **VERSIONS**      | Python 3.10, requests 2.x, Pillow 10.x |
 
 ## Introduction
@@ -58,7 +58,7 @@ source .venv/bin/activate
 
 ## Install Requests
 
-First we install `requests`, a library to handle HTTP requests. This is what talks to the Hugging Face API.
+First we install [`requests`](https://requests.readthedocs.io/), a library to handle HTTP requests. This is what talks to the Hugging Face API.
 
 ```bash
 pip install requests
@@ -66,7 +66,7 @@ pip install requests
 
 ## Install Dotenv
 
-Next we install `python-dotenv`, which loads environment variables from a file so we can keep our API token out of the code.
+Next we install [`python-dotenv`](https://pypi.org/project/python-dotenv/), which loads environment variables from a file so we can keep our API token out of the code.
 
 ```bash
 pip install python-dotenv
@@ -74,7 +74,7 @@ pip install python-dotenv
 
 ## Install Pillow
 
-Finally we install `Pillow`, the imaging library we'll use at the end to draw a shareable score card.
+Finally we install [`Pillow`](https://pillow.readthedocs.io/), the imaging library we'll use at the end to draw a shareable score card.
 
 ```bash
 pip install Pillow
@@ -249,7 +249,7 @@ Try it on posts from your feed. The worse the post, the higher the score.
 
 A terminal score is fun, but you want something to *post*. Grab two files from the project repo and drop them in your folder:
 
-- **[`card.py`](https://github.com/anp-exe/codedex-challenge-v2/blob/main/card.py)**: the card generator
+- **[`card.py`](https://github.com/anp-exe/detect-ai-slop-tutorial/blob/main/card.py)**: the card generator
 - **`NotoColorEmoji.ttf`**: the emoji font, so your card looks the same on every computer
 
 Add the import at the top of `slop.py`, then call `make_card` at the end of `main()`:
@@ -264,7 +264,7 @@ Run `slop.py` again and a `slop_card.png` appears in your folder, ready to post.
 > <img src="images/slop_card.png" width="300">
 
 > [!TIP]
-> **Want to peek inside [`card.py`](https://github.com/anp-exe/codedex-challenge-v2/blob/main/card.py)?** Go for it. It uses Pillow to draw a gradient, a circular score meter (`arc`), and rounded corners (a mask). A great file to study once the main project works.
+> **Want to peek inside [`card.py`](https://github.com/anp-exe/detect-ai-slop-tutorial/blob/main/card.py)?** Go for it. It uses Pillow to draw a gradient, a circular score meter (`arc`), and rounded corners (a mask). A great file to study once the main project works.
 
 ## Final Words
 

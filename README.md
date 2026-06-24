@@ -1,9 +1,9 @@
 # LinkedIn Slop Detector
 
-This repo is for the **Codédex monthly challenge**. The full tutorial can be found here: **[TUTORIAL.md](https://github.com/anp-exe/codedex-challenge-v2/blob/main/TUTORIAL.md)**.
+This repo is for the **Codédex monthly challenge**. The full tutorial can be found here: **[TUTORIAL.md](https://github.com/anp-exe/detect-ai-slop-tutorial/blob/main/TUTORIAL.md)**.
 
 > [!NOTE]
-> If you're here for the tutorial, you'll need to download two files from this repo and drop them into your project folder: the emoji font **[`NotoColorEmoji.ttf`](https://github.com/anp-exe/codedex-challenge-v2/blob/main/NotoColorEmoji.ttf)** (so your card looks the same on every computer) and the card generator **[`card.py`](https://github.com/anp-exe/codedex-challenge-v2/blob/main/card.py)**.
+> If you're here for the tutorial, you'll need to download two files from this repo and drop them into your project folder: the emoji font **[`NotoColorEmoji.ttf`](https://github.com/anp-exe/detect-ai-slop-tutorial/blob/main/NotoColorEmoji.ttf)** (so your card looks the same on every computer) and the card generator **[`card.py`](https://github.com/anp-exe/detect-ai-slop-tutorial/blob/main/card.py)**.
 
 <p align="center">
   <img src="images/codedex.gif" width="150">
@@ -25,7 +25,7 @@ source .venv/bin/activate
 pip install requests python-dotenv Pillow
 ```
 
-Add your Hugging Face token to a `.env` file (see the [tutorial](https://github.com/anp-exe/codedex-challenge-v2/blob/main/TUTORIAL.md) for how to get one):
+Add your Hugging Face token to a `.env` file (see the [tutorial](https://github.com/anp-exe/detect-ai-slop-tutorial/blob/main/TUTORIAL.md) for how to get one):
 
 ```
 HF_TOKEN=hf_your_token_here
