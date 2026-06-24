@@ -66,7 +66,7 @@ pip install requests
 
 ## Install Dotenv
 
-Next we install [`python-dotenv`](https://pypi.org/project/python-dotenv/), which loads environment variables from a file so we can keep our API token out of the code.
+Next we install [`python-dotenv`](https://saurabh-kumar.com/python-dotenv/), which loads environment variables from a file so we can keep our API token out of the code.
 
 ```bash
 pip install python-dotenv
