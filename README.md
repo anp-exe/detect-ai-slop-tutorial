@@ -1,11 +1,9 @@
-<p align="center">
-  <img src="images/header.png" width="100%">
-</p>
-
 # LinkedIn Slop Detector
 
 This repo is for the **Codédex monthly challenge**. The full tutorial can be found here: **[TUTORIAL.md](https://github.com/anp-exe/codedex-challenge-v2/blob/main/TUTORIAL.md)**.
-
+<p align="center">
+  <img src="images/codedex.gif" width="150">
+</p>
 It's a Python tool that reads any LinkedIn post and gives it a **Slop Score /100** with a verdict, then saves it as a shareable card. Along the way you'll learn to use the **Hugging Face API** for zero-shot text classification and blend AI judgment with your own transparent rules.
 
 <p align="center">
