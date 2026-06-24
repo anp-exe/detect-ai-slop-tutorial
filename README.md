@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="images/header.png" width="50%">
+  <img src="images/header.png" width="100%">
 </p>
 
 # LinkedIn Slop Detector

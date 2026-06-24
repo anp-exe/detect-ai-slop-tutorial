@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="images/header.png" width="50%">
+  <img src="images/header.png" width="100%">
 </p>
 
 # Build an AI Slop Detector with the Hugging Face API
@@ -30,6 +30,10 @@ Along the way you'll learn how to use the **Hugging Face API** for **zero-shot t
 Hugging Face is a community and platform that hosts a bunch of open source machine learning models, datasets, and more. It offers pre-trained models for tasks like text classification and sentiment analysis, all callable through a simple API with just a few lines of Python.
 
 Let's get started! 🥫
+
+<p> 
+    <img src="images/python.gif" width="20%">
+</p>
 
 ## Setting Up
 
