@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="images/header.png" width="100%">
-</p>
+![Build an AI Slop Detector with Hugging Face](images/header.png)
 
 # Build an AI Slop Detector with the Hugging Face API
 
