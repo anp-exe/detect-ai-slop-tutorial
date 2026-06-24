@@ -15,11 +15,12 @@
 
 ## Introduction
 
-Are you sick of reading AI slop on LinkedIn? The "I got rejected 100 times. Then everything changed 👇" broetry, the buzzword soup, the "Agree?" bait?
+Ever heard of the **dead internet theory**? It's the idea that more and more of what we read online isn't written by 
+people at all but churned out by AI. Whether or not you buy the full conspiracy, one place it feels undeniably true 
+is **LinkedIn**. The feed has become ground zero for AI slop. "I got rejected 100 times. Then everything changed" 
+broetry, the buzzword soup, the "Agree?" bait, all of it identical.
 
-In this tutorial we'll build a tool that gives any post a **Slop Score /100** with a verdict then saves it as a shareable card.
-
-Along the way you'll learn how to use the **Hugging Face API** for **zero-shot text classification**, and how to blend AI judgment with your own transparent rules.
+In this tutorial we'll build a tool that gives any post a **Slop Score /100** with a verdict, then saves it as a shareable card. Along the way you'll learn how to use the **Hugging Face API** for **zero-shot text classification**, and how to blend AI judgment with your own transparent rules.
 
 > <img src="images/slop-card-example.png" width="300">
 
@@ -269,7 +270,7 @@ Run `slop.py` again and a `slop_card.png` appears in your folder, ready to post.
 
 You did it! You learned how to use the **Hugging Face Inference API** with **zero-shot classification** (inventing your own labels, no training!), combine **AI judgment with transparent rules** (a useful real-world pattern), keep your API token safe with a `.env` file, and turn a result into a polished, shareable card.
 
-If you keep this innovation up you'll be detecting slop across the entire internet in no time. Thanks for reading!
+But more than a slop detector, think of this as a reminder. Now more than ever, creativity is the thing that makes you stand out. When the baseline is an infinite scroll of interchangeable AI posts, a genuine voice, an original idea, a sentence that sounds like an actual human, cuts straight through. So go build, go write, go post like a real person. Thanks for reading!
 
 ## What Next?
 

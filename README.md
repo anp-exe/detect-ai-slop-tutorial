@@ -1,6 +1,10 @@
 # LinkedIn Slop Detector
 
 This repo is for the **Codédex monthly challenge**. The full tutorial can be found here: **[TUTORIAL.md](https://github.com/anp-exe/codedex-challenge-v2/blob/main/TUTORIAL.md)**.
+
+> [!NOTE]
+> If you're here for the tutorial, you'll need to download two files from this repo and drop them into your project folder: the emoji font **[`NotoColorEmoji.ttf`](https://github.com/anp-exe/codedex-challenge-v2/blob/main/NotoColorEmoji.ttf)** (so your card looks the same on every computer) and the card generator **[`card.py`](https://github.com/anp-exe/codedex-challenge-v2/blob/main/card.py)**.
+
 <p align="center">
   <img src="images/codedex.gif" width="150">
 </p>
