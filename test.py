@@ -1,6 +1,6 @@
-import os, re, requests
+import os, requests
 from dotenv import load_dotenv
-from card import make_card
+from card import make_card, offense_count
 
 load_dotenv()
 HF_TOKEN = os.environ.get("HF_TOKEN")
@@ -8,33 +8,34 @@ HF_URL = "https://router.huggingface.co/hf-inference/models/facebook/bart-large-
 BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
              "thought leader", "grateful", "blessed", "move the needle"]
 CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
-QUESTION_BAIT = ["do you think", "what's your", "what are your", "what do you",
-                 "how many", "how do you", "let me know", "drop a comment"]
-FILLER = ["simply", "genuinely", "truly", "really", "actually",
-          "literally", "honestly", "ultimately", "absolutely"]
-ANTITHESIS = [r"it'?s not\b.{0,70}?\bit'?s\b",
-              r"isn'?t (?:just |always |only |about |simply )?.{0,70}?\bit'?s\b",
-              r"not just\b.{0,70}?\bbut\b"]
+ANTITHESIS = ["it's not just", "it's not about", "isn't just", "isn't about",
+              "isn't always", "isn't only", "not just about", "it's not that",
+              "no longer"]
 
 def count_hits(text, phrases):
     return sum(text.lower().count(p) for p in phrases)
 
 def engagement_bait(text):
-    hits = count_hits(text, CLOSERS) + count_hits(text, QUESTION_BAIT)
+    hits = count_hits(text, CLOSERS)
     if text.strip().endswith("?"):
         hits += 1
     return hits
 
-def antithesis_hits(text):
-    return sum(len(re.findall(p, text.lower())) for p in ANTITHESIS)
-
 def count_dashes(text):
     return text.count("—") + text.count("–") + text.count(" - ")
 
+def anaphora_hits(text):
+    """Lines that repeat another line's opening two words (e.g. 'Culture is built...')."""
+    from collections import Counter
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    starts = Counter(" ".join(l.lower().split()[:2]) for l in lines if len(l.split()) >= 2)
+    return sum(c for c in starts.values() if c >= 2)
+
 def rule_signals(text):
     lines = [l.strip() for l in text.splitlines() if l.strip()]
-    short = sum(1 for l in lines if len(l.split()) <= 5)
-    broetry = short / len(lines) if lines else 0
+    short = sum(1 for l in lines if len(l.split()) <= 6)
+    # only trust the one-liner ratio once there are enough lines to be meaningful
+    broetry = short / len(lines) if len(lines) >= 6 else 0
     emoji_bullets = sum(1 for l in lines if not l[0].isascii())
 
     dashes = count_dashes(text)
@@ -42,11 +43,11 @@ def rule_signals(text):
     score = min(20, broetry * 28)
     score += min(14, count_hits(text, BUZZWORDS) * 4)
     score += min(12, engagement_bait(text) * 6)
-    score += min(8, emoji_bullets * 2)
-    score += min(8, max(0, text.count("#") - 2) * 2)
+    score += min(12, emoji_bullets * 2)
+    score += min(12, max(0, text.count("#") - 2) * 2)
     score += min(8, max(0, dashes - 3) * 3)
-    score += min(10, antithesis_hits(text) * 6)
-    score += min(8, count_hits(text, FILLER) * 3)
+    score += min(10, count_hits(text, ANTITHESIS) * 6)
+    score += min(12, anaphora_hits(text) * 3)
     return min(80, score)
 
 def hf_performative_score(text, token):
@@ -60,52 +61,43 @@ def hf_performative_score(text, token):
     return scores.get(labels[1], 0.0)
 
 def verdict(score):
-    if score >= 80: return "Certified Artisanal Slop 🥫"
-    if score >= 60: return "Peak LinkedIn Cringe 💼"
-    if score >= 40: return "Mildly Insufferable 😬"
+    if score >= 70: return "Certified Artisanal Slop 🥫"
+    if score >= 50: return "Peak LinkedIn Cringe 💼"
+    if score >= 30: return "Mildly Insufferable 😬"
+    if score >= 15: return "Suspiciously Normal 🤔"
     return "An Actual Human Wrote This 😮"
 
 def main():
-    if not HF_TOKEN:
-        raise SystemExit("No token found. Add HF_TOKEN=hf_... to your .env file.")
+    text = """"
+Christina Koch (44) is an electrical engineer. She holds the record for longest continuous time in space by a woman, of 328 days. Victor Glover (46) is a US Navy test pilot. He joined Nasa in 2013 and made his first spaceflight in 2020. He was the first Black person to stay on the space station for an extended period of six months. 
 
-    text = """"Hi Kirstie, unfortunately 4 stages is just overkill for a job, and puts me off going for roles like this."
+Congratulations are in order to Koch and Glover for paving the way for women and people of color.
 
-This was feedback I received from a candidate for a Senior Individual Contributor role.
-
-The process was:
-
-📞 Initial screening call
-💻 Technical test
-💬 Discussion about the test/wider technical assessment 
-🤝 Final interview
-
-Four touchpoints. Yet, from the candidate's perspective, it was simply too much. 
-
-Every interview stage usually has a good reason behind it - assessing technical skills, understanding how someone thinks, or getting stakeholder buy-in.
-
-But while each stage makes sense on its own, together they can become a barrier. The best candidates are often the busiest, and if the process feels too time-consuming, they'll simply opt out.
-
-The goal isn't always fewer interviews, it's making sure every stage genuinely adds value.
-
-How many interview stages do you think is reasonable for a senior IC role?"""
+"""
 
     rules = rule_signals(text)
     hf = hf_performative_score(text, HF_TOKEN)
-    score = round(min(100, rules + hf * 40))
-    print(f"\n  Slop Score: {score}/100  —  {verdict(score)}\n")
 
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     signals = {
-        "broetry": (sum(1 for l in lines if len(l.split()) <= 5) / len(lines)) if lines else 0,
+        "broetry": (sum(1 for l in lines if len(l.split()) <= 6) / len(lines)) if len(lines) >= 6 else 0,
         "buzzwords": count_hits(text, BUZZWORDS),
         "closers": engagement_bait(text),
         "hashtags": text.count("#"),
         "emoji_bullets": sum(1 for l in lines if not l[0].isascii()),
         "dashes": count_dashes(text),
-        "antithesis": antithesis_hits(text),
-        "filler": count_hits(text, FILLER),
+        "antithesis": count_hits(text, ANTITHESIS),
+        "anaphora": anaphora_hits(text),
     }
+
+    if offense_count(signals) == 0:
+        # no tells flagged: lean on the AI alone, kept low
+        score = round(hf * 25)
+    else:
+        # scale the whole blend up to use the full range
+        score = round(min(100, (rules + hf * 40) * 1.4))
+
+    print(f"\n  Slop Score: {score}/100  —  {verdict(score)}\n")
     make_card(score, signals)
 
 if __name__ == "__main__":

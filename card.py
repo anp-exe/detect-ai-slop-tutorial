@@ -50,13 +50,14 @@ def paste_emoji(img, e, x, y, size=46):
         pass
 
 def _verdict(score):
-    if score >= 80: return "Certified Artisanal Slop", "🥫", RED
-    if score >= 60: return "Peak LinkedIn Cringe", "💼", RED
-    if score >= 40: return "Mildly Insufferable", "😬", AMBER
-    if score >= 20: return "Suspiciously Normal", "🤔", GREEN
+    if score >= 70: return "Certified Artisanal Slop", "🥫", RED
+    if score >= 50: return "Peak LinkedIn Cringe", "💼", RED
+    if score >= 30: return "Mildly Insufferable", "😬", AMBER
+    if score >= 15: return "Suspiciously Normal", "🤔", BLUE
     return "An Actual Human Wrote This", "😮", GREEN
 
-def _offenses(sig):
+def _offense_list(sig):
+    """Every real offense the signals trigger (no 'human' placeholder)."""
     out = []
     if sig.get("broetry",0) >= 0.4:
         out.append(("🍞","Broetry detected", f"{int(sig['broetry']*100)}% of lines are one-liners", PINK,(60,40,80)))
@@ -66,14 +67,24 @@ def _offenses(sig):
         out.append(("🪝","Engagement bait", "fishes for comments with a question", BLUE,(34,50,70)))
     if sig.get("antithesis",0) >= 1:
         out.append(("🔁","AI antithesis", '"it\'s not X, it\'s Y" phrasing', PURPLE,(48,38,70)))
-    if sig.get("filler",0) >= 2:
-        n=sig["filler"]; out.append(("💬","Filler intensifiers", f"{n} hollow adverbs (simply, genuinely...)", AMBER,(70,50,34)))
     if sig.get("hashtags",0) >= 4:
         out.append(("#️⃣","Hashtag pileup", f"{sig['hashtags']} hashtags", PURPLE,(48,38,70)))
     if sig.get("emoji_bullets",0) >= 2:
         out.append(("✨","Emoji bullet points", f"{sig['emoji_bullets']} decorative emoji lines", GREEN,(34,54,46)))
-    if sig.get("dashes",0) > 3:
+    if sig.get("dashes",0) > 6:
+        out.append(("➖","Dash connoisseur", f"{sig['dashes']} dashes, a true em-dash artisan", PURPLE,(48,38,70)))
+    elif sig.get("dashes",0) > 3:
         out.append(("➖","Em-dash overload", f"{sig['dashes']} dashes, a dead AI giveaway", BLUE,(34,50,70)))
+    if sig.get("anaphora",0) >= 2:
+        out.append(("🔁","Anaphora spam", f"{sig['anaphora']} lines reuse the same opener", PURPLE,(48,38,70)))
+    return out
+
+def offense_count(sig):
+    """How many real offense boxes the card will show."""
+    return len(_offense_list(sig))
+
+def _offenses(sig):
+    out = _offense_list(sig)
     if not out:
         out.append(("🌱","Refreshingly human","no major slop signals found", GREEN,(34,54,46)))
     return out[:3]
