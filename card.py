@@ -65,8 +65,6 @@ def _offense_list(sig):
         n=sig["buzzwords"]; out.append(("📣","Buzzword overload", f"{n} corporate buzzword{'s' if n!=1 else ''}", AMBER,(70,34,52)))
     if sig.get("closers",0) >= 1:
         out.append(("🪝","Engagement bait", "fishes for comments with a question", BLUE,(34,50,70)))
-    if sig.get("antithesis",0) >= 1:
-        out.append(("🔁","AI antithesis", '"it\'s not X, it\'s Y" phrasing', PURPLE,(48,38,70)))
     if sig.get("hashtags",0) >= 4:
         out.append(("#️⃣","Hashtag pileup", f"{sig['hashtags']} hashtags", PURPLE,(48,38,70)))
     if sig.get("emoji_bullets",0) >= 2:
@@ -78,10 +76,6 @@ def _offense_list(sig):
     if sig.get("anaphora",0) >= 2:
         out.append(("🔁","Anaphora spam", f"{sig['anaphora']} lines reuse the same opener", PURPLE,(48,38,70)))
     return out
-
-def offense_count(sig):
-    """How many real offense boxes the card will show."""
-    return len(_offense_list(sig))
 
 def _offenses(sig):
     out = _offense_list(sig)

@@ -1,6 +1,6 @@
 import os, requests
 from dotenv import load_dotenv
-from card import make_card, offense_count
+from card import make_card
 
 load_dotenv()
 HF_TOKEN = os.environ.get("HF_TOKEN")
@@ -8,9 +8,6 @@ HF_URL = "https://router.huggingface.co/hf-inference/models/facebook/bart-large-
 BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
              "thought leader", "grateful", "blessed", "move the needle"]
 CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
-ANTITHESIS = ["it's not just", "it's not about", "isn't just", "isn't about",
-              "isn't always", "isn't only", "not just about", "it's not that",
-              "no longer"]
 
 def count_hits(text, phrases):
     return sum(text.lower().count(p) for p in phrases)
@@ -46,9 +43,21 @@ def rule_signals(text):
     score += min(12, emoji_bullets * 2)
     score += min(12, max(0, text.count("#") - 2) * 2)
     score += min(8, max(0, dashes - 3) * 3)
-    score += min(10, count_hits(text, ANTITHESIS) * 6)
     score += min(12, anaphora_hits(text) * 3)
     return min(80, score)
+
+def offense_count(signals):
+    """How many slop signals tripped their threshold (the boxes on the card)."""
+    flags = [
+        signals["broetry"] >= 0.4,
+        signals["buzzwords"] >= 1,
+        signals["closers"] >= 1,
+        signals["hashtags"] >= 4,
+        signals["emoji_bullets"] >= 2,
+        signals["dashes"] > 3,
+        signals["anaphora"] >= 2,
+    ]
+    return sum(flags)
 
 def hf_performative_score(text, token):
     labels = ["humble authentic personal story",
@@ -69,9 +78,36 @@ def verdict(score):
 
 def main():
     text = """"
-Christina Koch (44) is an electrical engineer. She holds the record for longest continuous time in space by a woman, of 328 days. Victor Glover (46) is a US Navy test pilot. He joined Nasa in 2013 and made his first spaceflight in 2020. He was the first Black person to stay on the space station for an extended period of six months. 
+She Plays To Win STEM Challenge Day for Secondary School Girls 
+📅 26 June 2026
+🎓 Secondary School Girls STEM Challenge Day in London 
+👩‍🎓 Empowering girls through Chess♟️ | Maths 🔢 | Coding 💻
+Giving Girls the Best Opening Move in Life
 
-Congratulations are in order to Koch and Glover for paving the way for women and people of color.
+We are thrilled to host this amazing day with several secondary school girls and invite inspiring STEM professionals, industry leaders, innovators and role models coming together to empower the next generation of girls:
+♟️ Strategic Thinking through Chess
+💻 Creative Problem Solving through Coding
+🔢 Mathematical Confidence & Challenge
+🚀 Real-World STEM Inspiration
+
+Hugely indebted to FundApps Get with the Program Aila Money Fai M.
+STEM Learning UK 
+
+Thankful to each of our speakers for making time to join us and share their career journeys and run sessions to inspire a future engineer, scientist, technologist, entrepreneur, data scientist or innovator! Jeni Trice Nitika Vyas, CFA 
+
+Credit to the Founder Lorin D'Costa, our Trustees Kanwal Bhatia Dipal Patel Jennifer Gelain-Sohn Naheed Vyas Rashmi Prabhakar, our Volunteers Alisha Vyas Emmanuelle Gelain-Sohn for sparing time to further this cause. And some of our supporters and allies Nadia Edwards-Dashti Charlotte de Metz 
+
+By sharing experiences, challenges and successes, we can help girls see what is possible when talent meets opportunity:
+✨ Be the role model you wish you'd had.
+✨ Inspire confidence and ambition.
+✨ Help unlock future STEM careers.
+
+Empowering Girls. Building Confidence. Solving Problems, Creating Futures.
+www.sheplaystowin.co.uk
+
+hashtag#GivingGirlsTheBestOpeningMoveInLife hashtag#ShePlaysToWin hashtag#STEMChallengeDay hashtag#GirlsinSTEM hashtag#WomenInTech hashtag#FutureLeaders hashtag#GirlsInTech hashtag#GirlsWhoCode hashtag#ChessInEducation hashtag#STEMEducation hashtag#RoleModelsMatter hashtag#DiversityInTech hashtag#InspiringTheFuture hashtag#SecondarySchools hashtag#STEMCareers
+
+Chess♟️ | Maths 🔢 | Coding 💻
 
 """
 
@@ -86,7 +122,6 @@ Congratulations are in order to Koch and Glover for paving the way for women and
         "hashtags": text.count("#"),
         "emoji_bullets": sum(1 for l in lines if not l[0].isascii()),
         "dashes": count_dashes(text),
-        "antithesis": count_hits(text, ANTITHESIS),
         "anaphora": anaphora_hits(text),
     }
 
