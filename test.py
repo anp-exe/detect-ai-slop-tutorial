@@ -1,96 +1,112 @@
-import os
+import os, re, requests
 from dotenv import load_dotenv
+from card import make_card
 
 load_dotenv()
 HF_TOKEN = os.environ.get("HF_TOKEN")
-BUZZWORDS = ["humbled", "thrilled to announce", "excited to share",
-             "game-changer", "synergy", "leverage", "move the needle",
-             "thought leader", "disrupt", "growth mindset", "deep dive",
-             "grateful", "blessed", "unpopular opinion"]
+HF_URL = "https://router.huggingface.co/hf-inference/models/facebook/bart-large-mnli"
+BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
+             "thought leader", "grateful", "blessed", "move the needle"]
+CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
+QUESTION_BAIT = ["do you think", "what's your", "what are your", "what do you",
+                 "how many", "how do you", "let me know", "drop a comment"]
+FILLER = ["simply", "genuinely", "truly", "really", "actually",
+          "literally", "honestly", "ultimately", "absolutely"]
+ANTITHESIS = [r"it'?s not\b.{0,70}?\bit'?s\b",
+              r"isn'?t (?:just |always |only |about |simply )?.{0,70}?\bit'?s\b",
+              r"not just\b.{0,70}?\bbut\b"]
 
-CLOSERS = ["agree?", "thoughts?", "who's with me", "comment below",
-           "what do you think", "repost if"]
 def count_hits(text, phrases):
-    text = text.lower()
-    return sum(text.count(phrase) for phrase in phrases)
+    return sum(text.lower().count(p) for p in phrases)
+
+def engagement_bait(text):
+    hits = count_hits(text, CLOSERS) + count_hits(text, QUESTION_BAIT)
+    if text.strip().endswith("?"):
+        hits += 1
+    return hits
+
+def antithesis_hits(text):
+    return sum(len(re.findall(p, text.lower())) for p in ANTITHESIS)
+
+def count_dashes(text):
+    return text.count("—") + text.count("–") + text.count(" - ")
+
 def rule_signals(text):
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-
-    # "broetry": what fraction of lines are tiny one-liners?
-    short = sum(1 for line in lines if len(line.split()) <= 5)
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    short = sum(1 for l in lines if len(l.split()) <= 5)
     broetry = short / len(lines) if lines else 0
+    emoji_bullets = sum(1 for l in lines if not l[0].isascii())
 
-    buzzwords = count_hits(text, BUZZWORDS)
-    closers = count_hits(text, CLOSERS)
+    dashes = count_dashes(text)
 
-    # lines that open with an emoji (or any non-keyboard character)
-    emoji_bullets = sum(1 for line in lines if not line[0].isascii())
-
-    hashtags = text.count("#")
-
-    # each signal adds points, capped so no single one dominates
-    score = 0
-    score += min(20, broetry * 28)              # broetry is worth up to 20
-    score += min(14, buzzwords * 4)             # 4 points per buzzword
-    score += min(10, closers * 6)               # 6 points per "Agree?"
-    score += min(8, emoji_bullets * 2)          # 2 points per emoji bullet
-    score += min(8, max(0, hashtags - 2) * 2)   # 2 free hashtags, then 2 points each
-
-    return {"broetry": round(broetry, 2), "buzzwords": buzzwords,
-            "closers": closers, "emoji_bullets": emoji_bullets,
-            "hashtags": hashtags, "rule_subscore": round(min(60, score), 1)}
-import requests
-
-HF_MODEL = "facebook/bart-large-mnli"
-HF_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
+    score = min(20, broetry * 28)
+    score += min(14, count_hits(text, BUZZWORDS) * 4)
+    score += min(12, engagement_bait(text) * 6)
+    score += min(8, emoji_bullets * 2)
+    score += min(8, max(0, text.count("#") - 2) * 2)
+    score += min(8, max(0, dashes - 3) * 3)
+    score += min(10, antithesis_hits(text) * 6)
+    score += min(8, count_hits(text, FILLER) * 3)
+    return min(80, score)
 
 def hf_performative_score(text, token):
     labels = ["humble authentic personal story",
               "performative self-promotional corporate content"]
-
     payload = {"inputs": text, "parameters": {"candidate_labels": labels}}
-    response = requests.post(HF_URL,
-                             headers={"Authorization": f"Bearer {token}"},
-                             json=payload, timeout=30)
-    response.raise_for_status()
-    data = response.json()
-
-    # the API returns a list of {"label": ..., "score": ...} dicts
-    scores = {item["label"]: item["score"] for item in data}
-    return scores.get("performative self-promotional corporate content", 0.0)
-def analyze(text, token):
-    sig = rule_signals(text)
-    hf = hf_performative_score(text, token)
-    score = round(min(100, sig["rule_subscore"] + hf * 40))
-    return score, sig
+    r = requests.post(HF_URL, headers={"Authorization": f"Bearer {token}"},
+                      json=payload, timeout=30)
+    r.raise_for_status()
+    scores = {item["label"]: item["score"] for item in r.json()}
+    return scores.get(labels[1], 0.0)
 
 def verdict(score):
     if score >= 80: return "Certified Artisanal Slop 🥫"
     if score >= 60: return "Peak LinkedIn Cringe 💼"
     if score >= 40: return "Mildly Insufferable 😬"
-    if score >= 20: return "Suspiciously Normal 🤔"
     return "An Actual Human Wrote This 😮"
+
 def main():
     if not HF_TOKEN:
         raise SystemExit("No token found. Add HF_TOKEN=hf_... to your .env file.")
 
-    # paste the LinkedIn post you want to score between the triple quotes:
-    text = """I got rejected 100 times.
+    text = """"Hi Kirstie, unfortunately 4 stages is just overkill for a job, and puts me off going for roles like this."
 
-Then everything changed.
+This was feedback I received from a candidate for a Senior Individual Contributor role.
 
-Here's what I learned 👇
+The process was:
 
-I'm humbled and grateful to announce I'm now a thought leader.
+📞 Initial screening call
+💻 Technical test
+💬 Discussion about the test/wider technical assessment 
+🤝 Final interview
 
-We need to leverage synergy to move the needle.
+Four touchpoints. Yet, from the candidate's perspective, it was simply too much. 
 
-Agree?
+Every interview stage usually has a good reason behind it - assessing technical skills, understanding how someone thinks, or getting stakeholder buy-in.
 
-#motivation #grindset #blessed"""
+But while each stage makes sense on its own, together they can become a barrier. The best candidates are often the busiest, and if the process feels too time-consuming, they'll simply opt out.
 
-    score, sig = analyze(text, HF_TOKEN)
+The goal isn't always fewer interviews, it's making sure every stage genuinely adds value.
+
+How many interview stages do you think is reasonable for a senior IC role?"""
+
+    rules = rule_signals(text)
+    hf = hf_performative_score(text, HF_TOKEN)
+    score = round(min(100, rules + hf * 40))
     print(f"\n  Slop Score: {score}/100  —  {verdict(score)}\n")
+
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    signals = {
+        "broetry": (sum(1 for l in lines if len(l.split()) <= 5) / len(lines)) if lines else 0,
+        "buzzwords": count_hits(text, BUZZWORDS),
+        "closers": engagement_bait(text),
+        "hashtags": text.count("#"),
+        "emoji_bullets": sum(1 for l in lines if not l[0].isascii()),
+        "dashes": count_dashes(text),
+        "antithesis": antithesis_hits(text),
+        "filler": count_hits(text, FILLER),
+    }
+    make_card(score, signals)
 
 if __name__ == "__main__":
     main()

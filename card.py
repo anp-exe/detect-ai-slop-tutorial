@@ -8,11 +8,9 @@ import os
 import platform
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
-# ---- colours ----
 PINK=(255,95,162); PURPLE=(168,85,247); WHITE=(245,242,236); GREY=(168,156,182)
 RED=(255,90,110); AMBER=(255,180,90); GREEN=(90,220,150); BLUE=(120,180,255)
 
-# ---- text fonts: sensible default per OS ----
 _SYS = platform.system()
 if _SYS == "Darwin":          # macOS
     SANS  = "/System/Library/Fonts/Helvetica.ttc"
@@ -27,8 +25,6 @@ else:                          # Linux
     SANSR = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
     _SYS_EMOJI = "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"; _SYS_EMOJI_SIZE = 109
 
-# ---- emoji font: prefer the bundled Noto (so every card looks identical),
-#      fall back to the system emoji font if the bundle isn't present ----
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _BUNDLED_EMOJI = os.path.join(_HERE, "NotoColorEmoji.ttf")
 if os.path.exists(_BUNDLED_EMOJI):
@@ -51,9 +47,8 @@ def paste_emoji(img, e, x, y, size=46):
         tmp = tmp.resize((size,size), Image.LANCZOS)
         img.paste(tmp, (x,y), tmp)
     except Exception:
-        pass  # if no emoji font is available, just skip it
+        pass
 
-# ---- verdict + offenses (shared logic lives in slop.py, passed in) ----
 def _verdict(score):
     if score >= 80: return "Certified Artisanal Slop", "🥫", RED
     if score >= 60: return "Peak LinkedIn Cringe", "💼", RED
@@ -68,11 +63,17 @@ def _offenses(sig):
     if sig.get("buzzwords",0) >= 1:
         n=sig["buzzwords"]; out.append(("📣","Buzzword overload", f"{n} corporate buzzword{'s' if n!=1 else ''}", AMBER,(70,34,52)))
     if sig.get("closers",0) >= 1:
-        out.append(("🪝","Engagement bait", 'ends with a "thoughts?" closer', BLUE,(34,50,70)))
+        out.append(("🪝","Engagement bait", "fishes for comments with a question", BLUE,(34,50,70)))
+    if sig.get("antithesis",0) >= 1:
+        out.append(("🔁","AI antithesis", '"it\'s not X, it\'s Y" phrasing', PURPLE,(48,38,70)))
+    if sig.get("filler",0) >= 2:
+        n=sig["filler"]; out.append(("💬","Filler intensifiers", f"{n} hollow adverbs (simply, genuinely...)", AMBER,(70,50,34)))
     if sig.get("hashtags",0) >= 4:
         out.append(("#️⃣","Hashtag pileup", f"{sig['hashtags']} hashtags", PURPLE,(48,38,70)))
     if sig.get("emoji_bullets",0) >= 2:
         out.append(("✨","Emoji bullet points", f"{sig['emoji_bullets']} decorative emoji lines", GREEN,(34,54,46)))
+    if sig.get("dashes",0) > 3:
+        out.append(("➖","Em-dash overload", f"{sig['dashes']} dashes, a dead AI giveaway", BLUE,(34,50,70)))
     if not out:
         out.append(("🌱","Refreshingly human","no major slop signals found", GREEN,(34,54,46)))
     return out[:3]

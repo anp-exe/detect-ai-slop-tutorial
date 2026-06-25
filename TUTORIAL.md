@@ -161,16 +161,18 @@ def rule_signals(text):
     short = sum(1 for l in lines if len(l.split()) <= 5)
     broetry = short / len(lines) if lines else 0
     emoji_bullets = sum(1 for l in lines if not l[0].isascii())
+    dashes = text.count("—") + text.count("–")
 
     score = min(20, broetry * 28)
     score += min(14, count_hits(text, BUZZWORDS) * 4)
     score += min(10, count_hits(text, CLOSERS) * 6)
     score += min(8, emoji_bullets * 2)
     score += min(8, max(0, text.count("#") - 2) * 2)
+    score += min(8, max(0, dashes - 3) * 3)
     return min(60, score)
 ```
 
-A few things are happening here. **Broetry** is the fraction of lines that are tiny one-liners, the signature LinkedIn format. **Emoji bullets** uses a neat trick: `isascii()` is `False` for emoji, so a line *starting* with one is almost certainly a ✨ decorative ✨ bullet. Each signal is capped with `min()` so no single offense can max out the score on its own. These signals are *transparent*: you can see exactly why a post scored high.
+A few things are happening here. **Broetry** is the fraction of lines that are tiny one-liners, the signature LinkedIn format. **Emoji bullets** uses a neat trick: `isascii()` is `False` for emoji, so a line *starting* with one is almost certainly a ✨ decorative ✨ bullet. **Dashes** counts em-dashes (—) and en-dashes (–): more than three is a tell-tale sign of AI-generated text, since language models love them. Each signal is capped with `min()` so no single offense can max out the score on its own. These signals are *transparent*: you can see exactly why a post scored high.
 
 ## Query the model
 
@@ -254,11 +256,22 @@ A terminal score is fun, but you want something to *post*. Grab two files from t
 - **[`card.py`](https://github.com/anp-exe/detect-ai-slop-tutorial/blob/main/card.py)**: the card generator
 - **`NotoColorEmoji.ttf`**: the emoji font, so your card looks the same on every computer
 
-Add the import at the top of `slop.py`, then call `make_card` at the end of `main()`:
+Add the import at the top of `slop.py`, then build the signals dict and call `make_card` at the end of `main()`. The card needs the raw signals (not the verdict text) so it can list your top offenses:
 
 ```python
 from card import make_card
-make_card(score, verdict(score))
+
+# gather the same signals the card needs, then draw it
+lines = [l.strip() for l in text.splitlines() if l.strip()]
+signals = {
+    "broetry": (sum(1 for l in lines if len(l.split()) <= 5) / len(lines)) if lines else 0,
+    "buzzwords": count_hits(text, BUZZWORDS),
+    "closers": count_hits(text, CLOSERS),
+    "hashtags": text.count("#"),
+    "emoji_bullets": sum(1 for l in lines if not l[0].isascii()),
+    "dashes": text.count("—") + text.count("–"),
+}
+make_card(score, signals)
 ```
 
 Run `slop.py` again and a `slop_card.png` appears in your folder, ready to post. 🎉

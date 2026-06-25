@@ -2,14 +2,13 @@ import os
 import re
 import requests
 from dotenv import load_dotenv
-from card import make_card # the bonus card generator (see card.py)
+from card import make_card
 
 load_dotenv()
 HF_TOKEN = os.environ.get("HF_TOKEN")
 HF_MODEL = "facebook/bart-large-mnli"
 HF_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
 
-# ---- rule-based "slop signals" ----
 BUZZWORDS = ["humbled","thrilled to announce","excited to share","game-changer",
              "synergy","leverage","move the needle","thought leader","disrupt",
              "growth mindset","deep dive","grateful","blessed","unpopular opinion"]
@@ -33,7 +32,6 @@ def rule_signals(text):
             "emoji_bullets": emoji_bullets, "hashtags": hashtags,
             "rule_subscore": round(min(60, score),1)}
 
-# ---- the Hugging Face zero-shot call ----
 def hf_performative_score(text, token):
     labels = ["humble authentic personal story",
               "performative self-promotional corporate content"]
@@ -42,7 +40,6 @@ def hf_performative_score(text, token):
                       json=payload, timeout=30)
     r.raise_for_status()
     data = r.json()
-    # the router returns a list of {"label":..., "score":...} dicts
     scores = {item["label"]: item["score"] for item in data}
     return scores.get("performative self-promotional corporate content", 0.0)
 
