@@ -44,7 +44,7 @@ Create a new directory named `slop-detector`. This is where our project will liv
 cd slop-detector
 ```
 
-## Create the Virtual Environment
+### Create the Virtual Environment
 
 Let's create a virtual environment, or venv, which is an isolated environment that contains a Python installation alongside our packages:
 
@@ -58,7 +58,7 @@ Now activate it:
 source .venv/bin/activate
 ```
 
-## Install the project dependencies
+### Install the project dependencies
 
 First we install [`requests`](https://requests.readthedocs.io/), a library to handle HTTP requests. This is what talks to the Hugging Face API.
 
@@ -78,7 +78,7 @@ Finally we install [`Pillow`](https://pillow.readthedocs.io/), the imaging libra
 pip install Pillow
 ```
 
-## Getting a Hugging Face Token
+### Getting a Hugging Face Token
 
 > [!WARNING]
 > Treat your token like a password. Never paste it into your code or commit it to GitHub.
@@ -91,7 +91,7 @@ The **Inference API** runs AI models with a simple web request. No GPU, no downl
 
 ![Creating a Hugging Face access token](images/hf-create-token.png)
 
-## Create an .env file
+### Create an .env file
 
 > [!TIP]
 > Add `.env` to your `.gitignore` so your token never reaches GitHub. Secrets live in `.env`, never exposed in the code.
