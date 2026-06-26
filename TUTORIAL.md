@@ -141,11 +141,15 @@ def count_hits(text, phrases):
 
 We lowercase first so "Synergy" and "synergy" both count, and we'll reuse this for several signals.
 
-Next, the engagement-bait closers (the lines that beg for a reaction) and a function that counts them, plus a point if the whole post ends on a question:
+Next, the engagement-bait closers, the lines that beg for a reaction:
 
 ```python
 CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
+```
 
+And a function that counts them, plus a point if the whole post ends on a question:
+
+```python
 def engagement_bait(text):
     hits = count_hits(text, CLOSERS)
     if text.strip().endswith("?"):
@@ -282,7 +286,7 @@ Now `main()` ties everything together. It scores a sample post, builds the `sign
 
 ```python
 def main():
-    # 👇 paste your own post between the triple quotes!
+    # paste your own post between the triple quotes!
     text = """I got rejected 100 times.
 Then everything changed.
 We need to leverage synergy to move the needle.
