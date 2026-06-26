@@ -75,16 +75,13 @@ def hf_performative_score(text, token):
 
 def main():
     # paste your own post between the triple quotes!
-    text = """"
-I got rejected 100 times.
+    text = """I got rejected 100 times.
 Then everything changed.
 We need to leverage synergy to move the needle.
 Culture is built when teams win.
 Culture is built when people care.
 Agree?
-#motivation #grindset #blessed
-
-"""
+#motivation #grindset #blessed"""
 
     rules = rule_score(text)
     hf = hf_performative_score(text, HF_TOKEN)

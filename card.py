@@ -66,9 +66,9 @@ def _offense_list(sig):
     if sig.get("emoji_bullets",0) >= 2:
         out.append(("✨","Emoji bullet points", f"{sig['emoji_bullets']} decorative emoji lines", GREEN,(34,54,46)))
     if sig.get("dashes",0) > 3:
-        out.append(("➖","Dash connoisseur", f"{sig['dashes']} dashes over the limit, a true em-dash artisan", PURPLE,(48,38,70)))
+        n=sig["dashes"]; out.append(("➖","Dash connoisseur", f"{n} dash{'es' if n!=1 else ''} over the limit, a true em-dash artisan", PURPLE,(48,38,70)))
     elif sig.get("dashes",0) > 0:
-        out.append(("➖","Em-dash overload", f"{sig['dashes']} dashes over the limit, a dead AI giveaway", BLUE,(34,50,70)))
+        n=sig["dashes"]; out.append(("➖","Em-dash overload", f"{n} dash{'es' if n!=1 else ''} over the limit, a dead AI giveaway", BLUE,(34,50,70)))
     if sig.get("anaphora",0) >= 2:
         out.append(("🔁","Anaphora spam", f"{sig['anaphora']} lines reuse the same opener", PURPLE,(48,38,70)))
     return out
