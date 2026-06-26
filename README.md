@@ -13,8 +13,8 @@ It's a Python tool that reads any LinkedIn post and gives it a **Slop Score /100
 a shareable card. Along the way you'll learn to use the **Hugging Face API** for zero-shot text classification and blend AI judgment with your own transparent rules.
 
 <p align="center">
-  <img src="images/slop-card-example.png" width="30%">
-  <img src="images/card-human-example.png" width="30%">
+  <img src="samples/1_certified_artisanal_slop.png" width="30%">
+  <img src="samples/5_an_actual_human.png" width="30%">
 </p>
 
 ## Quick start
