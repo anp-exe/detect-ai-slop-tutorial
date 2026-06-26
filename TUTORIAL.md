@@ -102,9 +102,10 @@ Create a dotfile called `.env` at the root of the project. This is where we plac
 HF_TOKEN=hf_your_token_here
 ```
 
-**I cannot see the dotfile I've created!**
-
-On Unix systems (e.g., macOS and Linux), the dot makes them "hidden" by default. However, they're simply files you can view and edit that start with a dot (`.`). If you're unable to see them, it means you need to [make them visible on your file explorer](https://www.graphpad.com/support/faq/how-to-view-files-on-your-mac-that-are-normally-invisible/).
+> [!CAUTION]
+> **I cannot see the dotfile I've created!**
+>
+> On Unix systems (e.g., macOS and Linux), the dot makes them "hidden" by default. However, they're simply files you can view and edit that start with a dot (`.`). If you're unable to see them, it means you need to [make them visible on your file explorer](https://www.graphpad.com/support/faq/how-to-view-files-on-your-mac-that-are-normally-invisible/).
 
 ## Creating the `slop.py` file
 
