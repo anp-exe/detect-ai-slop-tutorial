@@ -98,7 +98,7 @@ The **Inference API** runs AI models with a simple web request. No GPU, no downl
 
 Create a dotfile called `.env` at the root of the project. This is where we place our token, on one line, no quotes:
 
-```
+```env
 HF_TOKEN=hf_your_token_here
 ```
 
@@ -106,11 +106,11 @@ HF_TOKEN=hf_your_token_here
 
 On Unix systems (e.g., MacOS and Linux), the dot makes them "hidden" by default. However, they're simply files you can view and edit that start with a dot (`.`). If you're unable to see them, it means you need to [make them visible on your file explorer](https://www.graphpad.com/support/faq/how-to-view-files-on-your-mac-that-are-normally-invisible/).
 
-## Create the project file
+## Creating the `slop.py` file
 
 At the root of the folder, create a file called `slop.py`. We'll build it up piece by piece, then see the whole thing at the end.
 
-## Import the libraries and load the token
+### Import the libraries and load the token
 
 We're using `requests` to call the API, plus a couple of built-in libraries. We load the token from `.env` and point at our model: `facebook/bart-large-mnli`, a zero-shot classifier.
 
@@ -125,7 +125,7 @@ HF_URL = "https://router.huggingface.co/hf-inference/models/facebook/bart-large-
 
 `load_dotenv()` reads the `.env` file, then `os.environ.get("HF_TOKEN")` pulls out our token.
 
-## Create your deterministic signals
+### Create your deterministic signals
 
 These helpers each measure one slop signal the same way every time, no AI and no randomness, which is what makes them *deterministic*. We'll add them one at a time.
 
@@ -199,7 +199,7 @@ def emoji_bullets(text):
 
 A neat trick: `isascii()` is `False` for an emoji, so a line *starting* with one is almost certainly a ✨ decorative ✨ bullet.
 
-## Add the rule signals
+### Add the rule signals
 
 One more list first, the corporate buzzwords, defined right where the scoring will use them:
 
@@ -225,7 +225,7 @@ def rule_signals(text):
 
 Because each signal is its own function, this reads almost like a checklist: weight the broetry, the buzzwords, the engagement bait, the emoji bullets, the hashtags, the dashes, and the anaphora, cap each one, and add them up. These signals are *transparent*: you can see exactly why a post scored high.
 
-## Count the offenses
+### Count the offenses
 
 We also want to know *how many* signals tripped, not just the total. This count gates the verdict later: if nothing tripped, we shouldn't call a post slop no matter what the AI thinks. It reads the `signals` dict we'll build in `main()` in a moment.
 
@@ -245,7 +245,7 @@ def offense_count(signals):
 
 Each line is a simple threshold check, and `sum()` counts how many came back `True` (Python treats `True` as 1).
 
-## Create your non-deterministic signals
+### Create your non-deterministic signals
 
 Rules only go so far. To catch the *overall vibe* we'll use a [zero-shot classifier](https://en.wikipedia.org/wiki/Zero-shot_learning): a model that sorts text into labels *we invent on the spot*, no training needed. Unlike the deterministic helpers above, this signal comes from an AI model, so it can read meaning the rules miss. We hand it two labels and pull out the "performative" probability.
 
