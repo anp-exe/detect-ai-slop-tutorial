@@ -39,7 +39,6 @@ def font(path, size):
         return ImageFont.load_default()
 
 def paste_emoji(img, e, x, y, size=46):
-    """Render a colour emoji at the font's native strike size, then resize."""
     try:
         big = ImageFont.truetype(EMOJI, EMOJI_SIZE)
         tmp = Image.new("RGBA", (EMOJI_SIZE+20, EMOJI_SIZE+20), (0,0,0,0))
@@ -57,7 +56,6 @@ def _verdict(score):
     return "An Actual Human Wrote This", "😮", GREEN
 
 def _offense_list(sig):
-    """Every real offense the signals trigger (no 'human' placeholder)."""
     out = []
     if sig.get("broetry",0) >= 0.4:
         out.append(("🍞","Broetry detected", f"{int(sig['broetry']*100)}% of lines are one-liners", PINK,(60,40,80)))
