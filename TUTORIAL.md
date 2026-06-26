@@ -58,7 +58,7 @@ Now activate it:
 source .venv/bin/activate
 ```
 
-## Install Requests
+## Install the project dependencies
 
 First we install [`requests`](https://requests.readthedocs.io/), a library to handle HTTP requests. This is what talks to the Hugging Face API.
 
@@ -66,15 +66,11 @@ First we install [`requests`](https://requests.readthedocs.io/), a library to ha
 pip install requests
 ```
 
-## Install Dotenv
-
 Next we install [`python-dotenv`](https://saurabh-kumar.com/python-dotenv/), which loads environment variables from a file so we can keep our API token out of the code.
 
 ```bash
 pip install python-dotenv
 ```
-
-## Install Pillow
 
 Finally we install [`Pillow`](https://pillow.readthedocs.io/), the imaging library we'll use at the end to draw a shareable score card.
 
