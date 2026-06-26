@@ -84,19 +84,16 @@ pip install Pillow
 
 ## Getting a Hugging Face Token
 
+> [!WARNING]
+> Treat your token like a password. Never paste it into your code or commit it to GitHub.
+
 The **Inference API** runs AI models with a simple web request. No GPU, no downloads. We just need a free token:
 
 1. Make a free account at [huggingface.co](https://huggingface.co).
-2. Go to **Settings → Access Tokens → New token** (a "Read" token is fine).
+2. Go to **Settings → Access Tokens → Create new token → Select "Read" token type**.
 3. Copy it (it starts with `hf_`).
 
 ![Creating a Hugging Face access token](images/hf-create-token.png)
-
-> [!NOTE]
-> Read-only tokens are enough for this project. You don't need to pay for anything.
-
-> [!WARNING]
-> Treat your token like a password. Never paste it into your code or commit it to GitHub.
 
 ## Create an .env file
 
