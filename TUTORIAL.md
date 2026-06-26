@@ -24,7 +24,7 @@ broetry, the buzzword soup, the "Agree?" bait, all of it identical.
 
 In this tutorial we'll build a tool that gives any post a **Slop Score /100** with a verdict, then saves it as a shareable card. Along the way you'll learn how to use the **Hugging Face API** for **zero-shot text classification**, and how to blend AI judgment with your own transparent rules.
 
-> <img src="samples/1_certified_artisanal_slop.png" width="300">
+<img src="samples/1_certified_artisanal_slop.png" width="300">
 
 ## What is Hugging Face? 🤗
 
