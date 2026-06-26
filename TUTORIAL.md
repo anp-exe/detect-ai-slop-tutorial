@@ -332,7 +332,7 @@ if __name__ == "__main__":
 
 Two ideas make this robust. The `signals` map holds every raw value, built once in `main()`, and `score_signals` reads it to hand back an offense count that gates the verdict: a post with zero tripped signals can't be slop, so we lean on the AI alone and keep the score low. Everything else gets the full blended score, scaled up so the mid-range fills in. To score a different post, just swap the text between the `"""` triple quotes.
 
-## Run the project
+### Run the project
 
 ```bash
 python slop.py
@@ -344,7 +344,7 @@ python slop.py
 
 Try it on posts from your feed. The worse the post, the higher the score.
 
-## Bonus: a shareable card
+### Bonus: a shareable card
 
 A terminal score is fun, but you want something to *post*. Grab two files from the project repo and drop them in your folder:
 
