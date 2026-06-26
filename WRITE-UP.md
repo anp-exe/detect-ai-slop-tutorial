@@ -38,7 +38,7 @@ As a hobby I love doing data journalism projects, so my first instinct was to ma
 
 ### The first idea (and why it died)
 
-My first real idea was an **AI chess opening coach**. After a draft, I scrapped it: it felt a little too complex for beginners, and AI is notoriously bad at chess.
+My first real idea was an **AI chess opening coach**. After a draft, I scrapped it: it felt a little too complex for beginners, and GPT Models are notoriously bad at chess.
 
 Okay, so now what?
 
