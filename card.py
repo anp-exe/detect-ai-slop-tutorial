@@ -63,14 +63,12 @@ def _offense_list(sig):
         n=sig["buzzwords"]; out.append(("📣","Buzzword overload", f"{n} corporate buzzword{'s' if n!=1 else ''}", AMBER,(70,34,52)))
     if sig.get("closers",0) >= 1:
         out.append(("🪝","Engagement bait", "fishes for comments with a question", BLUE,(34,50,70)))
-    if sig.get("hashtags",0) >= 4:
-        out.append(("#️⃣","Hashtag pileup", f"{sig['hashtags']} hashtags", PURPLE,(48,38,70)))
     if sig.get("emoji_bullets",0) >= 2:
         out.append(("✨","Emoji bullet points", f"{sig['emoji_bullets']} decorative emoji lines", GREEN,(34,54,46)))
-    if sig.get("dashes",0) > 6:
-        out.append(("➖","Dash connoisseur", f"{sig['dashes']} dashes, a true em-dash artisan", PURPLE,(48,38,70)))
-    elif sig.get("dashes",0) > 3:
-        out.append(("➖","Em-dash overload", f"{sig['dashes']} dashes, a dead AI giveaway", BLUE,(34,50,70)))
+    if sig.get("dashes",0) > 3:
+        out.append(("➖","Dash connoisseur", f"{sig['dashes']} dashes over the limit, a true em-dash artisan", PURPLE,(48,38,70)))
+    elif sig.get("dashes",0) > 0:
+        out.append(("➖","Em-dash overload", f"{sig['dashes']} dashes over the limit, a dead AI giveaway", BLUE,(34,50,70)))
     if sig.get("anaphora",0) >= 2:
         out.append(("🔁","Anaphora spam", f"{sig['anaphora']} lines reuse the same opener", PURPLE,(48,38,70)))
     return out

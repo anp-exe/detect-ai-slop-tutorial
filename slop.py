@@ -6,19 +6,23 @@ load_dotenv()
 HF_TOKEN = os.environ.get("HF_TOKEN")
 HF_URL = "https://router.huggingface.co/hf-inference/models/facebook/bart-large-mnli"
 
-def count_hits(text, phrases):
-    return sum(text.lower().count(p) for p in phrases)
-
-CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
+def count_corporate_buzzwords(text):
+    """How many LinkedIn buzzwords the post uses (humbled, synergy, ...)."""
+    BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
+                 "thought leader", "grateful", "blessed", "move the needle"]
+    return sum(text.lower().count(b) for b in BUZZWORDS)
 
 def engagement_bait(text):
-    hits = count_hits(text, CLOSERS)
-    if text.strip().endswith("?"):
-        hits += 1
-    return hits
+    """Comment-bait closers, plus a point if the whole post ends on a question."""
+    CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
+    hits = sum(text.lower().count(c) for c in CLOSERS)
+    return hits + 1 if text.strip().endswith("?") else hits
 
-def count_dashes(text):
-    return text.count("—") + text.count("–") + text.count(" - ")
+def excess_dashes(text):
+    """Dashes beyond a 3-dash grace (em-dashes, en-dashes, spaced hyphens)."""
+    DASHES = ["—", "–", " - "]
+    total = sum(text.count(d) for d in DASHES)
+    return max(0, total - 3)
 
 def anaphora_hits(text):
     """Lines that repeat another line's opening two words (e.g. 'Culture is built...')."""
@@ -38,17 +42,12 @@ def emoji_bullets(text):
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     return sum(1 for l in lines if not l[0].isascii())
 
-BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
-             "thought leader", "grateful", "blessed", "move the needle"]
-
-def rule_signals(text):
-    dashes = count_dashes(text)
+def rule_score(text):
     score = min(20, broetry_ratio(text) * 28)
-    score += min(14, count_hits(text, BUZZWORDS) * 4)
+    score += min(14, count_corporate_buzzwords(text) * 4)
     score += min(12, engagement_bait(text) * 6)
     score += min(12, emoji_bullets(text) * 2)
-    score += min(12, max(0, text.count("#") - 2) * 2)
-    score += min(8, max(0, dashes - 3) * 3)
+    score += min(8, excess_dashes(text) * 3)
     score += min(12, anaphora_hits(text) * 3)
     return min(80, score)
 
@@ -58,9 +57,8 @@ def offense_count(signals):
         signals["broetry"] >= 0.4,
         signals["buzzwords"] >= 1,
         signals["closers"] >= 1,
-        signals["hashtags"] >= 4,
         signals["emoji_bullets"] >= 2,
-        signals["dashes"] > 3,
+        signals["dashes"] > 0,
         signals["anaphora"] >= 2,
     ]
     return sum(flags)
@@ -88,16 +86,15 @@ Agree?
 
 """
 
-    rules = rule_signals(text)
+    rules = rule_score(text)
     hf = hf_performative_score(text, HF_TOKEN)
 
     signals = {
         "broetry": broetry_ratio(text),
-        "buzzwords": count_hits(text, BUZZWORDS),
+        "buzzwords": count_corporate_buzzwords(text),
         "closers": engagement_bait(text),
-        "hashtags": text.count("#"),
         "emoji_bullets": emoji_bullets(text),
-        "dashes": count_dashes(text),
+        "dashes": excess_dashes(text),
         "anaphora": anaphora_hits(text),
     }
 

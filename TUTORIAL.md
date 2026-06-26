@@ -104,7 +104,7 @@ HF_TOKEN=hf_your_token_here
 
 **I cannot see the dotfile I've created!**
 
-On Unix systems (e.g., MacOS and Linux), the dot makes them "hidden" by default. However, they're simply files you can view and edit that start with a dot (`.`). If you're unable to see them, it means you need to [make them visible on your file explorer](https://www.graphpad.com/support/faq/how-to-view-files-on-your-mac-that-are-normally-invisible/).
+On Unix systems (e.g., macOS and Linux), the dot makes them "hidden" by default. However, they're simply files you can view and edit that start with a dot (`.`). If you're unable to see them, it means you need to [make them visible on your file explorer](https://www.graphpad.com/support/faq/how-to-view-files-on-your-mac-that-are-normally-invisible/).
 
 ## Creating the `slop.py` file
 
@@ -127,43 +127,40 @@ HF_URL = "https://router.huggingface.co/hf-inference/models/facebook/bart-large-
 
 ### Create your deterministic signals
 
-These helpers each measure one slop signal the same way every time, no AI and no randomness, which is what makes them *deterministic*. We'll add them one at a time.
+These helpers each measure one slop signal the same way every time, no AI, no randomness. That's what makes them *deterministic*: they're fully within our control, and we can extend them however we like. We'll add them one at a time.
 
-First, a reusable counter for how many phrases from a list appear in the text:
-
-```python
-def count_hits(text, phrases):
-    return sum(text.lower().count(p) for p in phrases)
-```
-
-We lowercase first so "Synergy" and "synergy" both count, and we'll reuse this for several signals.
-
-Next, the engagement-bait closers, the lines that beg for a reaction:
+First up, the corporate buzzwords. We keep the word list right inside the function and count how many appear, lowercasing the text first so "Synergy" and "synergy" both count:
 
 ```python
-CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
+def count_corporate_buzzwords(text):
+    BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
+                 "thought leader", "grateful", "blessed", "move the needle"]
+    return sum(text.lower().count(b) for b in BUZZWORDS)
 ```
 
-And a function that counts them, plus a point if the whole post ends on a question:
+The `BUZZWORDS` list lives inside the function since nothing else needs it.
+
+Next, the engagement-bait closers, the lines that beg for a reaction. We count them, plus a point if the whole post ends on a question:
 
 ```python
 def engagement_bait(text):
-    hits = count_hits(text, CLOSERS)
-    if text.strip().endswith("?"):
-        hits += 1
-    return hits
+    CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
+    hits = sum(text.lower().count(c) for c in CLOSERS)
+    return hits + 1 if text.strip().endswith("?") else hits
 ```
 
-Defining `CLOSERS` right next to the function that uses it keeps the list and its purpose together.
+Keeping `CLOSERS` inside the function ties the list to its only user.
 
-Now count the dashes LLMs love, em-dashes, en-dashes, and spaced hyphens:
+Now the dashes LLMs love, em-dashes, en-dashes, and spaced hyphens. A few are perfectly normal, so instead of the raw count we return how many a post runs *over* a 3-dash grace:
 
 ```python
-def count_dashes(text):
-    return text.count("—") + text.count("–") + text.count(" - ")
+def excess_dashes(text):
+    DASHES = ["—", "–", " - "]
+    total = sum(text.count(d) for d in DASHES)
+    return max(0, total - 3)
 ```
 
-More than three of these in a post is a strong AI tell.
+So three or fewer dashes scores `0` here, and the scoring line stays focused on a plain `excess_dashes(text)` with no threshold math inline.
 
 Next, anaphora, repeated line-openers (the "Culture is built when... / No more X..." pattern):
 
@@ -187,7 +184,10 @@ def broetry_ratio(text):
     return short / len(lines) if len(lines) >= 6 else 0
 ```
 
-We only trust the ratio once a post has at least 6 lines, otherwise a 2-line post reads as "100% broetry" off a tiny sample.
+> [!NOTE]
+> Here, we decided to only trust the ratio once a post has at least 6 lines.
+> 
+> Broetry is a long post chopped into many tiny lines. The thing we're actually trying to catch is a *wall* of short, punchy one-liners. In a 2- or 3-line post, a single short line already pushes the fraction to "100%," even though that's just a normal short message, not the pattern. Rather than flag those as slop, we return `0` until there are enough lines for the ratio to mean anything.
 
 Finally, emoji bullets, lines that start with an emoji:
 
@@ -197,37 +197,28 @@ def emoji_bullets(text):
     return sum(1 for l in lines if not l[0].isascii())
 ```
 
-A neat trick: `isascii()` is `False` for an emoji, so a line *starting* with one is almost certainly a ✨ decorative ✨ bullet.
+A quick trick: `isascii()` is `True` only for plain English letters, digits, and basic punctuation, so it returns `False` for an emoji. That means a line *starting* with one usually gets flagged as a ✨ decorative ✨ bullet. It won't *only* catch emoji, an accented letter like `é` or a curly quote at the start trips it too, but for LinkedIn-style posts that's a good-enough tell.
 
-### Add the rule signals
+### Score the signals
 
-One more list first, the corporate buzzwords, defined right where the scoring will use them:
-
-```python
-BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
-             "thought leader", "grateful", "blessed", "move the needle"]
-```
-
-Now the [scoring function](https://en.wikipedia.org/wiki/Scoring_rule). It calls each signal helper and turns them into a subscore out of 80. Each `min()` cap is that signal's weight, so no single tell can run away with the score.
+Now the [scoring function](https://en.wikipedia.org/wiki/Scoring_rule), `rule_score`. It calls each signal helper and turns them into a subscore out of 80. Each `min()` cap is that signal's weight, so no single tell can run away with the score.
 
 ```python
-def rule_signals(text):
-    dashes = count_dashes(text)
+def rule_score(text):
     score = min(20, broetry_ratio(text) * 28)
-    score += min(14, count_hits(text, BUZZWORDS) * 4)
+    score += min(14, count_corporate_buzzwords(text) * 4)
     score += min(12, engagement_bait(text) * 6)
     score += min(12, emoji_bullets(text) * 2)
-    score += min(12, max(0, text.count("#") - 2) * 2)
-    score += min(8, max(0, dashes - 3) * 3)
+    score += min(8, excess_dashes(text) * 3)
     score += min(12, anaphora_hits(text) * 3)
     return min(80, score)
 ```
 
-Because each signal is its own function, this reads almost like a checklist: weight the broetry, the buzzwords, the engagement bait, the emoji bullets, the hashtags, the dashes, and the anaphora, cap each one, and add them up. These signals are *transparent*: you can see exactly why a post scored high.
+Because each signal is its own function, this reads almost like a checklist: weight the broetry, the buzzwords, the engagement bait, the emoji bullets, the dashes, and the anaphora, cap each one, and add them up. These signals are *transparent*: you can see exactly why a post scored high.
 
-### Count the offenses
+### Count the offenses tripped
 
-We also want to know *how many* signals tripped, not just the total. This count gates the verdict later: if nothing tripped, we shouldn't call a post slop no matter what the AI thinks. It reads the `signals` dict we'll build in `main()` in a moment.
+`rule_score` gave us one number for *how much* slop a post shows. To improve our slop verdict confidence, we also want to know *how many* signals were spotted. One signal maxing out can spike the score, but a post that trips multiple signals is more likely to be slop. `offense_count` defines a threshold and counts how many signals trip it.
 
 ```python
 def offense_count(signals):
@@ -235,15 +226,14 @@ def offense_count(signals):
         signals["broetry"] >= 0.4,
         signals["buzzwords"] >= 1,
         signals["closers"] >= 1,
-        signals["hashtags"] >= 4,
         signals["emoji_bullets"] >= 2,
-        signals["dashes"] > 3,
+        signals["dashes"] > 0,
         signals["anaphora"] >= 2,
     ]
     return sum(flags)
 ```
 
-Each line is a simple threshold check, and `sum()` counts how many came back `True` (Python treats `True` as 1).
+Each line compares a signal to its threshold, so it lands on `True` or `False`. The neat part: [Python booleans are just integers](https://docs.python.org/3/library/functions.html#bool) (`True` is `1`, `False` is `0`), so `sum(flags)` counts how many tripped.
 
 ### Create your non-deterministic signals
 
@@ -281,16 +271,15 @@ Culture is built when people care.
 Agree?
 #motivation #grindset #blessed"""
 
-    rules = rule_signals(text)
+    rules = rule_score(text)
     hf = hf_performative_score(text, HF_TOKEN)
 
     signals = {
         "broetry": broetry_ratio(text),
-        "buzzwords": count_hits(text, BUZZWORDS),
+        "buzzwords": count_corporate_buzzwords(text),
         "closers": engagement_bait(text),
-        "hashtags": text.count("#"),
         "emoji_bullets": emoji_bullets(text),
-        "dashes": count_dashes(text),
+        "dashes": excess_dashes(text),
         "anaphora": anaphora_hits(text),
     }
 
@@ -359,7 +348,7 @@ Now more than ever, creativity is the thing that makes you stand out. When the b
 
 ## What Next?
 
-- **Tune the weights:** change the `min()` caps in `rule_signals` and watch how the scores move. Which tells do you think deserve to matter most?
+- **Tune the weights:** change the `min()` caps in `rule_score` and watch how the scores move. Which tells do you think deserve to matter most?
 - **Beat your high score:** hunt your feed for the most egregious post you can find and see how close to 100 you can push it.
 - **Add your own signals:** detect the ALL CAPS WORDS or whatever tell drives *you* up the wall, then give it a weight and a card box.
 
