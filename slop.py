@@ -75,13 +75,6 @@ def hf_performative_score(text, token):
     scores = {item["label"]: item["score"] for item in r.json()}
     return scores.get(labels[1], 0.0)
 
-def verdict(score):
-    if score >= 70: return "Certified Artisanal Slop 🥫"
-    if score >= 50: return "Peak LinkedIn Cringe 💼"
-    if score >= 30: return "Mildly Insufferable 😬"
-    if score >= 15: return "Suspiciously Normal 🤔"
-    return "An Actual Human Wrote This 😮"
-
 def main():
     # paste your own post between the triple quotes!
     text = """"
@@ -115,7 +108,13 @@ Agree?
         # scale the whole blend up to use the full range
         score = round(min(100, (rules + hf * 40) * 1.4))
 
-    print(f"\n  Slop Score: {score}/100  —  {verdict(score)}\n")
+    if score >= 70:   label = "Certified Artisanal Slop 🥫"
+    elif score >= 50: label = "Peak LinkedIn Cringe 💼"
+    elif score >= 30: label = "Mildly Insufferable 😬"
+    elif score >= 15: label = "Suspiciously Normal 🤔"
+    else:             label = "An Actual Human Wrote This 😮"
+
+    print(f"\n  Slop Score: {score}/100  —  {label}\n")
     make_card(score, signals)
 
 if __name__ == "__main__":
