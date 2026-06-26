@@ -359,13 +359,13 @@ Run `slop.py` again and a `slop_card.png` appears in your folder, ready to post.
 
 You did it! You learned how to use the **Hugging Face Inference API** with **zero-shot classification** (inventing your own labels, no training!), combine **AI judgment with transparent rules** (a useful real-world pattern), keep your API token safe with a `.env` file, and turn a result into a polished, shareable card.
 
-Now more than ever, creativity is the thing that makes you stand out. When the baseline is an infinite scroll of interchangeable AI posts, a genuine voice, an original idea, a sentence that sounds like an actual human, cuts straight through. So go build, go write, go post like a real person. Thanks for reading!
+Now more than ever, creativity is the thing that makes you stand out. When the baseline is an infinite scroll of interchangeable AI posts, a genuine voice, an original idea, a sentence that sounds like an actual human, cuts through. So go build, go write, go post like a real person. Thanks for reading!
 
 ## What Next?
 
-- **More signals:** detect the "thread" opener or ALL CAPS WORDS.
-- **Browser extension:** score posts right in your LinkedIn feed.
-- **Web app:** wrap it in Streamlit so anyone can paste and score.
+- **Tune the weights:** change the `min()` caps in `rule_signals` and watch how the scores move. Which tells do you think deserve to matter most?
+- **Beat your high score:** hunt your feed for the most egregious post you can find and see how close to 100 you can push it.
+- **Add your own signals:** detect the ALL CAPS WORDS or whatever tell drives *you* up the wall, then give it a weight and a card box.
 
 ## More Resources
 
