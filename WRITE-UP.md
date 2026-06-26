@@ -2,7 +2,7 @@
 
 *A Codédex monthly challenge walkthrough.*
 
-> The full behind-the-scenes of how I built my entry for the Codédex monthly challenge: an AI-powered **LinkedIn Slop Detector**. From the first brainstorm to the final submission, roughly **14 hours** (per WakaTime), one infuriating bug, and a crash course in Figma.
+> The full behind-the-scenes of how I built my entry for the Codédex monthly challenge: an AI-powered **LinkedIn Slop Detector**. From the first brainstorm to the final submission, roughly **14 coding hours** (per WakaTime), one infuriating bug, and a crash course in Figma.
 
 ## The process at a glance
 
@@ -119,6 +119,6 @@ Wording changed again, and so did the code. For instance, the `BUZZWORDS` and `C
 
 I tidied the repo: a **README** explaining the project with links right at the beginning (just in case someone following from Codédex got lost), a separate **TUTORIAL.md**, and a folder for the images. And voilà, a monthly challenge entry.
 
-What a journey. Roughly **14 hours** on this project, according to WakaTime.
+What a journey. Roughly **14 coding hours** on this project, according to WakaTime.
 
 ---
