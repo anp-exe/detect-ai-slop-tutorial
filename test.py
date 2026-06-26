@@ -5,12 +5,11 @@ from card import make_card
 load_dotenv()
 HF_TOKEN = os.environ.get("HF_TOKEN")
 HF_URL = "https://router.huggingface.co/hf-inference/models/facebook/bart-large-mnli"
-BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
-             "thought leader", "grateful", "blessed", "move the needle"]
-CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
 
 def count_hits(text, phrases):
     return sum(text.lower().count(p) for p in phrases)
+
+CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
 
 def engagement_bait(text):
     hits = count_hits(text, CLOSERS)
@@ -28,19 +27,26 @@ def anaphora_hits(text):
     starts = Counter(" ".join(l.lower().split()[:2]) for l in lines if len(l.split()) >= 2)
     return sum(c for c in starts.values() if c >= 2)
 
-def rule_signals(text):
+def broetry_ratio(text):
+    """Fraction of lines that are tiny one-liners (only trusted once there are 6+ lines)."""
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     short = sum(1 for l in lines if len(l.split()) <= 6)
-    # only trust the one-liner ratio once there are enough lines to be meaningful
-    broetry = short / len(lines) if len(lines) >= 6 else 0
-    emoji_bullets = sum(1 for l in lines if not l[0].isascii())
+    return short / len(lines) if len(lines) >= 6 else 0
 
+def emoji_bullets(text):
+    """How many lines start with an emoji (decorative bullets)."""
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    return sum(1 for l in lines if not l[0].isascii())
+
+BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
+             "thought leader", "grateful", "blessed", "move the needle"]
+
+def rule_signals(text):
     dashes = count_dashes(text)
-
-    score = min(20, broetry * 28)
+    score = min(20, broetry_ratio(text) * 28)
     score += min(14, count_hits(text, BUZZWORDS) * 4)
     score += min(12, engagement_bait(text) * 6)
-    score += min(12, emoji_bullets * 2)
+    score += min(12, emoji_bullets(text) * 2)
     score += min(12, max(0, text.count("#") - 2) * 2)
     score += min(8, max(0, dashes - 3) * 3)
     score += min(12, anaphora_hits(text) * 3)
@@ -77,6 +83,7 @@ def verdict(score):
     return "An Actual Human Wrote This 😮"
 
 def main():
+    # 👇 paste your own post between the triple quotes!
     text = """"
 She Plays To Win STEM Challenge Day for Secondary School Girls 
 📅 26 June 2026
@@ -114,13 +121,12 @@ Chess♟️ | Maths 🔢 | Coding 💻
     rules = rule_signals(text)
     hf = hf_performative_score(text, HF_TOKEN)
 
-    lines = [l.strip() for l in text.splitlines() if l.strip()]
     signals = {
-        "broetry": (sum(1 for l in lines if len(l.split()) <= 6) / len(lines)) if len(lines) >= 6 else 0,
+        "broetry": broetry_ratio(text),
         "buzzwords": count_hits(text, BUZZWORDS),
         "closers": engagement_bait(text),
         "hashtags": text.count("#"),
-        "emoji_bullets": sum(1 for l in lines if not l[0].isascii()),
+        "emoji_bullets": emoji_bullets(text),
         "dashes": count_dashes(text),
         "anaphora": anaphora_hits(text),
     }

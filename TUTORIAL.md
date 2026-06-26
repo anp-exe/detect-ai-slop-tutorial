@@ -128,35 +128,45 @@ HF_URL = "https://router.huggingface.co/hf-inference/models/facebook/bart-large-
 
 `load_dotenv()` reads the `.env` file, then `os.environ.get("HF_TOKEN")` pulls out our token.
 
-## Add the phrases we're hunting for
+## Create your deterministic signals
 
-A lot of slop is detectable with simple patterns before we even touch AI. Let's list two classic tells: corporate buzzwords and engagement-bait closers (the lines that beg for a reaction).
+These helpers each measure one slop signal the same way every time, no AI and no randomness, which is what makes them *deterministic*. We'll add them one at a time.
 
-```python
-BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
-             "thought leader", "grateful", "blessed", "move the needle"]
-CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
-```
-
-These are phrases that show up in a lot of slop posts.
-
-## Add the helper functions
-
-Each of these measures one slop signal. `count_hits` is a reusable helper that counts how many phrases from *any* list you hand it appear in the text (we'll point it at `BUZZWORDS` and `CLOSERS`). `engagement_bait` flags closers plus any post that ends on a question, `count_dashes` counts the dashes LLMs love, and `anaphora_hits` catches repeated line-openers (the "Culture is built when... / No more X..." pattern).
+First, a reusable counter for how many phrases from a list appear in the text:
 
 ```python
 def count_hits(text, phrases):
     return sum(text.lower().count(p) for p in phrases)
+```
+
+We lowercase first so "Synergy" and "synergy" both count, and we'll reuse this for several signals.
+
+Next, the engagement-bait closers (the lines that beg for a reaction) and a function that counts them, plus a point if the whole post ends on a question:
+
+```python
+CLOSERS = ["agree?", "thoughts?", "comment below", "repost if"]
 
 def engagement_bait(text):
     hits = count_hits(text, CLOSERS)
     if text.strip().endswith("?"):
         hits += 1
     return hits
+```
 
+Defining `CLOSERS` right next to the function that uses it keeps the list and its purpose together.
+
+Now count the dashes LLMs love, em-dashes, en-dashes, and spaced hyphens:
+
+```python
 def count_dashes(text):
     return text.count("—") + text.count("–") + text.count(" - ")
+```
 
+More than three of these in a post is a strong AI tell.
+
+Next, anaphora, repeated line-openers (the "Culture is built when... / No more X..." pattern):
+
+```python
 def anaphora_hits(text):
     from collections import Counter
     lines = [l.strip() for l in text.splitlines() if l.strip()]
@@ -164,32 +174,55 @@ def anaphora_hits(text):
     return sum(c for c in starts.values() if c >= 2)
 ```
 
-`count_hits` lowercases first so "Synergy" and "synergy" both count. `anaphora_hits` groups lines by their first two words and counts any opener that repeats, since a real person rarely starts three lines exactly the same way.
+This groups lines by their first two words and counts any opener that repeats, since a real person rarely starts three lines exactly the same way.
+
+Then broetry, the fraction of lines that are tiny one-liners:
+
+```python
+def broetry_ratio(text):
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    short = sum(1 for l in lines if len(l.split()) <= 6)
+    # only trust the ratio once there are enough lines to be meaningful
+    return short / len(lines) if len(lines) >= 6 else 0
+```
+
+We only trust the ratio once a post has at least 6 lines, otherwise a 2-line post reads as "100% broetry" off a tiny sample.
+
+Finally, emoji bullets, lines that start with an emoji:
+
+```python
+def emoji_bullets(text):
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    return sum(1 for l in lines if not l[0].isascii())
+```
+
+A neat trick: `isascii()` is `False` for an emoji, so a line *starting* with one is almost certainly a ✨ decorative ✨ bullet.
 
 ## Add the rule signals
 
-Now the scoring function. It measures a handful of signals and turns them into a subscore out of 80. Each `min()` cap is that signal's weight.
+One more list first, the corporate buzzwords, defined right where the scoring will use them:
+
+```python
+BUZZWORDS = ["humbled", "thrilled to announce", "synergy", "leverage",
+             "thought leader", "grateful", "blessed", "move the needle"]
+```
+
+Now the [scoring function](https://en.wikipedia.org/wiki/Scoring_rule). It calls each signal helper and turns them into a subscore out of 80. Each `min()` cap is that signal's weight, so no single tell can run away with the score.
 
 ```python
 def rule_signals(text):
-    lines = [l.strip() for l in text.splitlines() if l.strip()]
-    short = sum(1 for l in lines if len(l.split()) <= 6)
-    # only trust the one-liner ratio once there are enough lines to be meaningful
-    broetry = short / len(lines) if len(lines) >= 6 else 0
-    emoji_bullets = sum(1 for l in lines if not l[0].isascii())
     dashes = count_dashes(text)
-
-    score = min(20, broetry * 28)
+    score = min(20, broetry_ratio(text) * 28)
     score += min(14, count_hits(text, BUZZWORDS) * 4)
     score += min(12, engagement_bait(text) * 6)
-    score += min(12, emoji_bullets * 2)
+    score += min(12, emoji_bullets(text) * 2)
     score += min(12, max(0, text.count("#") - 2) * 2)
     score += min(8, max(0, dashes - 3) * 3)
     score += min(12, anaphora_hits(text) * 3)
     return min(80, score)
 ```
 
-A few things are happening here. **Broetry** is the fraction of lines that are tiny one-liners, the signature LinkedIn format, but we only trust that ratio once a post has at least 6 lines, otherwise a 2-line post reads as "100% broetry" off a tiny sample. **Emoji bullets** uses a neat trick: `isascii()` is `False` for emoji, so a line *starting* with one is almost certainly a ✨ decorative ✨ bullet. **Dashes** counts em-dashes, en-dashes, and spaced hyphens (more than three is a strong AI tell). Each signal is capped with `min()`, and that cap is its weight, so no single offense can run away with the score. These signals are *transparent*: you can see exactly why a post scored high.
+Because each signal is its own function, this reads almost like a checklist: weight the broetry, the buzzwords, the engagement bait, the emoji bullets, the hashtags, the dashes, and the anaphora, cap each one, and add them up. These signals are *transparent*: you can see exactly why a post scored high.
 
 ## Count the offenses
 
@@ -211,9 +244,9 @@ def offense_count(signals):
 
 Each line is a simple threshold check, and `sum()` counts how many came back `True` (Python treats `True` as 1).
 
-## Query the model
+## Create your non-deterministic signals
 
-Rules only go so far. To catch the *overall vibe* we'll use a **zero-shot classifier**: a model that sorts text into labels *we invent on the spot*, no training needed. We hand it two labels and pull out the "performative" probability.
+Rules only go so far. To catch the *overall vibe* we'll use a [zero-shot classifier](https://en.wikipedia.org/wiki/Zero-shot_learning): a model that sorts text into labels *we invent on the spot*, no training needed. Unlike the deterministic helpers above, this signal comes from an AI model, so it can read meaning the rules miss. We hand it two labels and pull out the "performative" probability.
 
 ```python
 def hf_performative_score(text, token):
@@ -232,9 +265,9 @@ We `POST` the post text plus our two labels, and the model returns a probability
 > [!TIP]
 > **First-run tip:** free models "sleep" when idle, so your first request might take ~20 seconds while the model wakes up. Just run it again.
 
-## Add the verdict
+## Wire it all together
 
-Now a function that maps a score to a verdict, so the number means something at a glance.
+First, one tiny self-explanatory helper that turns the final number into a label:
 
 ```python
 def verdict(score):
@@ -245,17 +278,13 @@ def verdict(score):
     return "An Actual Human Wrote This 😮"
 ```
 
-Five tiers: the higher the score, the worse the verdict, with "Suspiciously Normal" as the gentle middle ground between clearly human and mildly slop.
-
-## Wire it all together
-
-Finally, a `main()` function that runs everything. It scores a sample post, builds the `signals` dict, and blends the two halves: if no offense boxes tripped, it trusts the AI alone (kept low), otherwise it scales the rules-plus-AI blend up by 1.4 to use the full range.
+Now `main()` ties everything together. It scores a sample post, builds the `signals` dict straight from our helper functions, then blends the two halves: if no offense boxes tripped, it trusts the AI alone (kept low), otherwise it scales the rules-plus-AI blend up by 1.4 to use the full range.
 
 ```python
 def main():
+    # 👇 paste your own post between the triple quotes!
     text = """I got rejected 100 times.
 Then everything changed.
-Here's what I learned 👇
 We need to leverage synergy to move the needle.
 Culture is built when teams win.
 Culture is built when people care.
@@ -265,23 +294,20 @@ Agree?
     rules = rule_signals(text)
     hf = hf_performative_score(text, HF_TOKEN)
 
-    lines = [l.strip() for l in text.splitlines() if l.strip()]
     signals = {
-        "broetry": (sum(1 for l in lines if len(l.split()) <= 6) / len(lines)) if len(lines) >= 6 else 0,
+        "broetry": broetry_ratio(text),
         "buzzwords": count_hits(text, BUZZWORDS),
         "closers": engagement_bait(text),
         "hashtags": text.count("#"),
-        "emoji_bullets": sum(1 for l in lines if not l[0].isascii()),
+        "emoji_bullets": emoji_bullets(text),
         "dashes": count_dashes(text),
         "anaphora": anaphora_hits(text),
     }
 
     if offense_count(signals) == 0:
-        # no tells flagged: lean on the AI alone, kept low
-        score = round(hf * 25)
+        score = round(hf * 25)                            # no tells: lean on the AI, kept low
     else:
-        # scale the whole blend up to use the full range
-        score = round(min(100, (rules + hf * 40) * 1.4))
+        score = round(min(100, (rules + hf * 40) * 1.4))  # otherwise use the full range
 
     print(f"\n  Slop Score: {score}/100  —  {verdict(score)}\n")
 
@@ -308,7 +334,7 @@ Try it on posts from your feed. The worse the post, the higher the score.
 A terminal score is fun, but you want something to *post*. Grab two files from the project repo and drop them in your folder:
 
 - **[`card.py`](https://github.com/anp-exe/detect-ai-slop-tutorial/blob/main/card.py)**: the card generator
-- **`NotoColorEmoji.ttf`**: the emoji font, so your card looks the same on every computer
+- **[`NotoColorEmoji.ttf`](https://github.com/anp-exe/detect-ai-slop-tutorial/blob/main/NotoColorEmoji.ttf)**: the emoji font, so your card looks the same on every computer
 
 You already built the `signals` dict in `main()`, so the card just needs two lines. Add the import at the top of `slop.py`:
 
@@ -333,7 +359,7 @@ Run `slop.py` again and a `slop_card.png` appears in your folder, ready to post.
 
 You did it! You learned how to use the **Hugging Face Inference API** with **zero-shot classification** (inventing your own labels, no training!), combine **AI judgment with transparent rules** (a useful real-world pattern), keep your API token safe with a `.env` file, and turn a result into a polished, shareable card.
 
-But more than a slop detector, think of this as a reminder. Now more than ever, creativity is the thing that makes you stand out. When the baseline is an infinite scroll of interchangeable AI posts, a genuine voice, an original idea, a sentence that sounds like an actual human, cuts straight through. So go build, go write, go post like a real person. Thanks for reading!
+Now more than ever, creativity is the thing that makes you stand out. When the baseline is an infinite scroll of interchangeable AI posts, a genuine voice, an original idea, a sentence that sounds like an actual human, cuts straight through. So go build, go write, go post like a real person. Thanks for reading!
 
 ## What Next?
 
