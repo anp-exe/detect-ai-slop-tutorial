@@ -186,7 +186,7 @@ def broetry_ratio(text):
 
 > [!NOTE]
 > Here, we decided to only trust the ratio once a post has at least 6 lines.
-> 
+>
 > Broetry is a long post chopped into many tiny lines. The thing we're actually trying to catch is a *wall* of short, punchy one-liners. In a 2- or 3-line post, a single short line already pushes the fraction to "100%," even though that's just a normal short message, not the pattern. Rather than flag those as slop, we return `0` until there are enough lines for the ratio to mean anything.
 
 Finally, emoji bullets, lines that start with an emoji:
@@ -201,49 +201,34 @@ A quick trick: `isascii()` is `True` only for plain English letters, digits, and
 
 ### Score the deterministic signals
 
-Now we turn those six signals into numbers. The trick is to call each helper **once**, store it in a variable, and reuse it for two jobs: a weighted **score** (*how much* slop) and an **offense count** (*how many* tells fired). We also pack the raw values into a `signals` dict so `main()` never has to call the helpers again.
+`main()` will collect every raw signal value into one `signals` map (we build it in a moment). `score_signals` takes that map and turns it into two numbers: a weighted **score** (*how much* slop) and an **offense count** (*how many* tells fired).
 
 ```python
-def score_signals(text):
-    broetry   = broetry_ratio(text)
-    buzzwords = count_corporate_buzzwords(text)
-    closers   = engagement_bait(text)
-    emoji     = emoji_bullets(text)
-    dashes    = excess_dashes(text)
-    anaphora  = anaphora_hits(text)
-
-    score = min(20, broetry * 28)
-    score += min(14, buzzwords * 4)
-    score += min(12, closers * 6)
-    score += min(12, emoji * 2)
-    score += min(8, dashes * 3)
-    score += min(12, anaphora * 3)
+def score_signals(signals):
+    score = min(20, signals["broetry"] * 28)
+    score += min(14, signals["buzzwords"] * 4)
+    score += min(12, signals["closers"] * 6)
+    score += min(12, signals["emoji_bullets"] * 2)
+    score += min(8, signals["dashes"] * 3)
+    score += min(12, signals["anaphora"] * 3)
 
     offenses = sum([
-        broetry >= 0.4,
-        buzzwords >= 1,
-        closers >= 1,
-        emoji >= 2,
-        dashes > 0,
-        anaphora >= 2,
+        signals["broetry"] >= 0.4,
+        signals["buzzwords"] >= 1,
+        signals["closers"] >= 1,
+        signals["emoji_bullets"] >= 2,
+        signals["dashes"] > 0,
+        signals["anaphora"] >= 2,
     ])
 
-    signals = {
-        "broetry": broetry,
-        "buzzwords": buzzwords,
-        "closers": closers,
-        "emoji_bullets": emoji,
-        "dashes": dashes,
-        "anaphora": anaphora,
-    }
-    return min(80, score), offenses, signals
+    return min(80, score), offenses
 ```
 
-**The score** is a weighted sum, capped at 80. Each `min()` cap is that signal's weight, so no single tell can run away with the score, and because every signal is its own variable you can see exactly why a post scored high.
+**The score** is a weighted sum, capped at 80. Each `min()` cap is that signal's weight, so no single tell can run away with the score.
 
 **The offense count** answers a different question: not *how big* the total is, but *how many* separate tells fired. One signal maxing out can spike the score, yet a post that trips several is the surer sign of slop. Each `>=` is a threshold check that lands on `True` or `False`, and because [Python booleans are just integers](https://docs.python.org/3/library/functions.html#bool) (`True` is `1`, `False` is `0`), `sum([...])` just counts how many tripped.
 
-We hand back all three: the capped score, the offense count, and the raw `signals` dict the card will use later.
+Passing the map in keeps things tidy: `main()` builds the raw values once, and the score, the offense count, and the card all read from that single source.
 
 ### Create your non-deterministic signals
 
@@ -263,43 +248,43 @@ def zero_shot(text, labels, token):
 
 How does it work? The model was trained to judge whether one sentence *implies* another, so we're effectively asking "does this post imply the label?" That's the magic.
 
-Now each AI signal is just a label pair handed to `zero_shot`, the same way each rule signal kept its word list inside. The first measures how *performative* the post reads:
+Now each AI signal is just a label pair handed to `zero_shot`, the same way each rule signal kept its word list inside. The first measures how much the post reads as a self-promotional brag:
 
 ```python
 def performative_score(text, token):
-    labels = ["humble authentic personal story",
-              "performative self-promotional corporate content"]
+    labels = ["a modest low-key update",
+              "a self-promotional brag"]
     return zero_shot(text, labels, token)
 ```
 
-The second measures how much it sounds like *generic AI filler* rather than a specific human story:
+The second measures how much it reads as a promotional announcement rather than a genuine personal anecdote:
 
 ```python
-def generic_score(text, token):
-    labels = ["a specific personal experience",
-              "generic AI-generated filler"]
+def promotional_score(text, token):
+    labels = ["a personal anecdote",
+              "a promotional announcement"]
     return zero_shot(text, labels, token)
 ```
+
+The labels are doing a lot of work here, so choose them carefully: describe what the post observably **is**, a *genre* the model already understands, not the conclusion you want. Asking "is this *AI-generated filler*?" barely moves the needle (this model has no concept of "AI-generated"); asking "is this *a promotional announcement*?" works great, because LinkedIn slop usually *is* a promo.
 
 > [!TIP]
 > **First-run tip:** free models "sleep" when idle, so your first request might take ~20 seconds while the model wakes up. Just run it again. Each signal is its own call, so the first run can wake the model up twice.
 
 ### Score the non-deterministic signals
 
-Just like `score_signals` did for the rules, one function runs each AI signal once and blends them, here a plain average into a single 0-1 "vibe":
+Just like `score_signals`, this scorer takes a map. `main()` builds an `ai_signals` map of the probabilities, and we blend its values into a single 0-1 "vibe", here a plain average:
 
 ```python
-def score_ai_signals(text, token):
-    performative = performative_score(text, token)
-    generic      = generic_score(text, token)
-    return (performative + generic) / 2
+def score_ai_signals(ai_signals):
+    return sum(ai_signals.values()) / len(ai_signals)
 ```
 
-Two label pairs, two probabilities, one number. To add a third signal later you touch two small places: a new `*_score` helper, and one more line here.
+Averaging the map's values keeps it open-ended: to add a third AI signal later you write one new `*_score` helper and add one line to the `ai_signals` map, the scorer itself never changes.
 
 ## Wire it all together
 
-`main()` ties everything together. It runs `score_signals` for the rule score (and offense count) and `score_ai_signals` for the AI vibe, then blends the two halves: if no signal tripped, it trusts the AI alone (kept low), otherwise it scales the rules-plus-AI blend up by 1.4 to use the full range. A short `if`/`elif` ladder then turns the final number into a verdict label right where it's printed — no need to split that into its own function, it's easier to follow inline.
+`main()` ties everything together. It builds two maps from the helper functions, `signals` for the rules and `ai_signals` for the AI probabilities, passes each to its scorer (`score_signals` for the rule score and offense count, `score_ai_signals` for the AI vibe), then blends the two halves: if no signal tripped, it trusts the AI alone (kept low), otherwise it scales the rules-plus-AI blend up by 1.4 to use the full range. A short `if`/`elif` ladder then turns the final number into a verdict label right where it's printed, no need to split that into its own function, it's easier to follow inline.
 
 ```python
 def main():
@@ -312,8 +297,21 @@ Culture is built when people care.
 Agree?
 #motivation #grindset #blessed"""
 
-    rules, offenses, signals = score_signals(text)
-    vibe = score_ai_signals(text, HF_TOKEN)
+    signals = {
+        "broetry": broetry_ratio(text),
+        "buzzwords": count_corporate_buzzwords(text),
+        "closers": engagement_bait(text),
+        "emoji_bullets": emoji_bullets(text),
+        "dashes": excess_dashes(text),
+        "anaphora": anaphora_hits(text),
+    }
+    ai_signals = {
+        "performative": performative_score(text, HF_TOKEN),
+        "promotional": promotional_score(text, HF_TOKEN),
+    }
+
+    rules, offenses = score_signals(signals)
+    vibe = score_ai_signals(ai_signals)
 
     if offenses == 0:
         score = round(vibe * 25)                            # no tells: lean on the AI, kept low
@@ -332,7 +330,7 @@ if __name__ == "__main__":
     main()
 ```
 
-Two ideas make this robust. `score_signals` runs every deterministic signal once and hands back an offense count, which gates the verdict: a post with zero tripped signals can't be slop, so we lean on the AI alone and keep the score low. Everything else gets the full blended score, scaled up so the mid-range fills in. To score a different post, just swap the text between the `"""` triple quotes.
+Two ideas make this robust. The `signals` map holds every raw value, built once in `main()`, and `score_signals` reads it to hand back an offense count that gates the verdict: a post with zero tripped signals can't be slop, so we lean on the AI alone and keep the score low. Everything else gets the full blended score, scaled up so the mid-range fills in. To score a different post, just swap the text between the `"""` triple quotes.
 
 ## Run the project
 
@@ -341,7 +339,7 @@ python slop.py
 ```
 
 ```
-  Slop Score: 43/100  —  Mildly Insufferable 😬
+  Slop Score: 87/100  —  Certified Artisanal Slop 🥫
 ```
 
 Try it on posts from your feed. The worse the post, the higher the score.
@@ -353,16 +351,16 @@ A terminal score is fun, but you want something to *post*. Grab two files from t
 - **[`card.py`](https://github.com/anp-exe/detect-ai-slop-tutorial/blob/main/card.py)**: the card generator
 - **[`NotoColorEmoji.ttf`](https://github.com/anp-exe/detect-ai-slop-tutorial/blob/main/NotoColorEmoji.ttf)**: the emoji font, so your card looks the same on every computer
 
-`score_signals` already handed `main()` the `signals` dict, so the card just needs two lines. Add the import at the top of `slop.py`:
+You already built the `signals` and `ai_signals` maps in `main()`, so the card just needs two lines. Add the import at the top of `slop.py`:
 
 ```python
 from card import make_card
 ```
 
-then call it at the very end of `main()`, passing the score and the signals it uses to draw your top offenses:
+then call it at the very end of `main()`, passing the score, the rule signals (for the top offenses), and the AI signals (for the "AI read" bars):
 
 ```python
-    make_card(score, signals)
+    make_card(score, signals, ai_signals)
 ```
 
 Run `slop.py` again and a `slop_card.png` appears in your folder, ready to post. 🎉

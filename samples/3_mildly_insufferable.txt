@@ -1,0 +1,4 @@
+Excited to share that after a long couple of months, our team finally shipped the new billing dashboard 🎉
+The thing I'm most happy about: it cut invoice-related support tickets by about 30% in the first three weeks, which means fewer late nights for our support folks.
+Genuinely grateful to the three people who stress-tested it to death before launch and caught the timezone bug that would've embarrassed us all.
+Small win, but a real one.

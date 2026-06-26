@@ -1,0 +1,2 @@
+spent four hours convinced the payments service was dropping events in prod. added logging everywhere, even started drafting the incident doc.
+it was a trailing comma in the test fixture that made the whole suite silently skip. the service was fine the entire time. i am going to go stare at a wall now.

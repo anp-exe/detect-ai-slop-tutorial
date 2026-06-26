@@ -1,0 +1,3 @@
+wrapped up my first full month at the new place today. spent most of it just reading code and asking dumb questions in standup.
+still feels a bit like everyone else knows where the bodies are buried and i'm holding a map upside down, but it's getting better. shipped my first small fix on thursday (a caching bug, nothing heroic).
+genuinely humbled by how much i still don't know, but grateful for the two teammates who keep answering my pings without making me feel slow.

@@ -79,8 +79,21 @@ def _offenses(sig):
         out.append(("🌱","Refreshingly human","no major slop signals found", GREEN,(34,54,46)))
     return out[:3]
 
-def make_card(score, sig, out="slop_card.png"):
-    W,H = 820,1020; RAD=56
+_AI_LABELS = {"performative": "Performative", "promotional": "Promotional"}
+
+def make_card(score, sig, ai_signals=None, out="slop_card.png"):
+    ai_items = list(ai_signals.items()) if ai_signals else []
+
+    # vertical layout: the card grows to fit an optional "AI READ" section
+    if ai_items:
+        ai_label_y = 486; ai_row0 = 528; ai_step = 48
+        ai_bottom = ai_row0 + (len(ai_items)-1)*ai_step + 22
+        off_y = ai_bottom + 40
+    else:
+        off_y = 520
+    ty0 = off_y + 44
+    W = 820; H = ty0 + 456; RAD = 56          # H keeps the original bottom spacing
+
     base = Image.new("RGB",(W,H),(12,10,16)); d = ImageDraw.Draw(base)
     for y in range(H):
         t=y/H
@@ -108,8 +121,22 @@ def make_card(score, sig, out="slop_card.png"):
     paste_emoji(base,v_emoji,int(px+14),cy+98,40)
     d.text((px+62,cy+102),v_text,font=font(SANS,32),fill=col)
 
-    d.text((60,520),"TOP OFFENSES",font=font(SANS,20),fill=GREY)
-    ty=564
+    # AI READ: the classifier's probabilities, drawn as bars (the AI half of the score)
+    if ai_items:
+        d.text((60,ai_label_y),"AI READ",font=font(SANS,20),fill=GREY)
+        bx0,bx1,bh = 320,W-150,22
+        for i,(key,val) in enumerate(ai_items):
+            by=ai_row0+i*ai_step; v=max(0.0,min(1.0,val))
+            bar=RED if v>=0.6 else AMBER if v>=0.35 else GREEN
+            d.text((60,by+bh//2),_AI_LABELS.get(key,key.title()),font=font(SANSR,24),fill=WHITE,anchor="lm")
+            d.rounded_rectangle([bx0,by,bx1,by+bh],radius=bh//2,fill=(54,44,72))
+            fw=int((bx1-bx0)*v)
+            if fw>0:
+                d.rounded_rectangle([bx0,by,bx0+max(fw,bh),by+bh],radius=bh//2,fill=bar)
+            d.text((bx1+18,by+bh//2),f"{round(v*100)}%",font=font(SANS,22),fill=bar,anchor="lm")
+
+    d.text((60,off_y),"TOP OFFENSES",font=font(SANS,20),fill=GREY)
+    ty=ty0
     for e,name,desc,acc,tint in _offenses(sig):
         d.rounded_rectangle([60,ty,W-60,ty+98],radius=22,fill=tint,outline=acc,width=2)
         paste_emoji(base,e,86,ty+27,46)

@@ -42,40 +42,25 @@ def emoji_bullets(text):
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     return sum(1 for l in lines if not l[0].isascii())
 
-def score_signals(text):
-    """Run each deterministic signal once, then derive the weighted score, the offense count, and the raw values (for the card)."""
-    broetry   = broetry_ratio(text)
-    buzzwords = count_corporate_buzzwords(text)
-    closers   = engagement_bait(text)
-    emoji     = emoji_bullets(text)
-    dashes    = excess_dashes(text)
-    anaphora  = anaphora_hits(text)
-
-    score = min(20, broetry * 28)
-    score += min(14, buzzwords * 4)
-    score += min(12, closers * 6)
-    score += min(12, emoji * 2)
-    score += min(8, dashes * 3)
-    score += min(12, anaphora * 3)
+def score_signals(signals):
+    """Turn the precomputed signal map into a weighted score and an offense count."""
+    score = min(20, signals["broetry"] * 28)
+    score += min(14, signals["buzzwords"] * 4)
+    score += min(12, signals["closers"] * 6)
+    score += min(12, signals["emoji_bullets"] * 2)
+    score += min(8, signals["dashes"] * 3)
+    score += min(12, signals["anaphora"] * 3)
 
     offenses = sum([
-        broetry >= 0.4,
-        buzzwords >= 1,
-        closers >= 1,
-        emoji >= 2,
-        dashes > 0,
-        anaphora >= 2,
+        signals["broetry"] >= 0.4,
+        signals["buzzwords"] >= 1,
+        signals["closers"] >= 1,
+        signals["emoji_bullets"] >= 2,
+        signals["dashes"] > 0,
+        signals["anaphora"] >= 2,
     ])
 
-    signals = {
-        "broetry": broetry,
-        "buzzwords": buzzwords,
-        "closers": closers,
-        "emoji_bullets": emoji,
-        "dashes": dashes,
-        "anaphora": anaphora,
-    }
-    return min(80, score), offenses, signals
+    return min(80, score), offenses
 
 def zero_shot(text, labels, token):
     """Ask the zero-shot classifier for the probability that text matches labels[1]."""
@@ -87,22 +72,20 @@ def zero_shot(text, labels, token):
     return scores.get(labels[1], 0.0)
 
 def performative_score(text, token):
-    """How performative and self-promotional the post reads (vs a humble personal story)."""
-    labels = ["humble authentic personal story",
-              "performative self-promotional corporate content"]
+    """How much the post reads as a self-promotional brag (vs a modest, low-key update)."""
+    labels = ["a modest low-key update",
+              "a self-promotional brag"]
     return zero_shot(text, labels, token)
 
-def generic_score(text, token):
-    """How much the post reads like generic AI filler (vs a specific personal experience)."""
-    labels = ["a specific personal experience",
-              "generic AI-generated filler"]
+def promotional_score(text, token):
+    """How much the post reads as a promotional announcement (vs a genuine personal anecdote)."""
+    labels = ["a personal anecdote",
+              "a promotional announcement"]
     return zero_shot(text, labels, token)
 
-def score_ai_signals(text, token):
-    """Run each AI signal once and average them into one 0-1 slop 'vibe'."""
-    performative = performative_score(text, token)
-    generic      = generic_score(text, token)
-    return (performative + generic) / 2
+def score_ai_signals(ai_signals):
+    """Average the AI signal probabilities into one 0-1 slop 'vibe'."""
+    return sum(ai_signals.values()) / len(ai_signals)
 
 def main():
     # paste your own post between the triple quotes!
@@ -114,8 +97,21 @@ Culture is built when people care.
 Agree?
 #motivation #grindset #blessed"""
 
-    rules, offenses, signals = score_signals(text)
-    vibe = score_ai_signals(text, HF_TOKEN)
+    signals = {
+        "broetry": broetry_ratio(text),
+        "buzzwords": count_corporate_buzzwords(text),
+        "closers": engagement_bait(text),
+        "emoji_bullets": emoji_bullets(text),
+        "dashes": excess_dashes(text),
+        "anaphora": anaphora_hits(text),
+    }
+    ai_signals = {
+        "performative": performative_score(text, HF_TOKEN),
+        "promotional": promotional_score(text, HF_TOKEN),
+    }
+
+    rules, offenses = score_signals(signals)
+    vibe = score_ai_signals(ai_signals)
 
     if offenses == 0:
         # no tells flagged: lean on the AI alone, kept low
@@ -131,7 +127,7 @@ Agree?
     else:             label = "An Actual Human Wrote This 😮"
 
     print(f"\n  Slop Score: {score}/100  —  {label}\n")
-    make_card(score, signals)
+    make_card(score, signals, ai_signals)
 
 if __name__ == "__main__":
     main()
