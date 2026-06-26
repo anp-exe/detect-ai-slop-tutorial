@@ -42,36 +42,67 @@ def emoji_bullets(text):
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     return sum(1 for l in lines if not l[0].isascii())
 
-def rule_score(text):
-    score = min(20, broetry_ratio(text) * 28)
-    score += min(14, count_corporate_buzzwords(text) * 4)
-    score += min(12, engagement_bait(text) * 6)
-    score += min(12, emoji_bullets(text) * 2)
-    score += min(8, excess_dashes(text) * 3)
-    score += min(12, anaphora_hits(text) * 3)
-    return min(80, score)
+def score_signals(text):
+    """Run each deterministic signal once, then derive the weighted score, the offense count, and the raw values (for the card)."""
+    broetry   = broetry_ratio(text)
+    buzzwords = count_corporate_buzzwords(text)
+    closers   = engagement_bait(text)
+    emoji     = emoji_bullets(text)
+    dashes    = excess_dashes(text)
+    anaphora  = anaphora_hits(text)
 
-def offense_count(signals):
-    """How many slop signals tripped their threshold (the boxes on the card)."""
-    flags = [
-        signals["broetry"] >= 0.4,
-        signals["buzzwords"] >= 1,
-        signals["closers"] >= 1,
-        signals["emoji_bullets"] >= 2,
-        signals["dashes"] > 0,
-        signals["anaphora"] >= 2,
-    ]
-    return sum(flags)
+    score = min(20, broetry * 28)
+    score += min(14, buzzwords * 4)
+    score += min(12, closers * 6)
+    score += min(12, emoji * 2)
+    score += min(8, dashes * 3)
+    score += min(12, anaphora * 3)
 
-def hf_performative_score(text, token):
-    labels = ["humble authentic personal story",
-              "performative self-promotional corporate content"]
+    offenses = sum([
+        broetry >= 0.4,
+        buzzwords >= 1,
+        closers >= 1,
+        emoji >= 2,
+        dashes > 0,
+        anaphora >= 2,
+    ])
+
+    signals = {
+        "broetry": broetry,
+        "buzzwords": buzzwords,
+        "closers": closers,
+        "emoji_bullets": emoji,
+        "dashes": dashes,
+        "anaphora": anaphora,
+    }
+    return min(80, score), offenses, signals
+
+def zero_shot(text, labels, token):
+    """Ask the zero-shot classifier for the probability that text matches labels[1]."""
     payload = {"inputs": text, "parameters": {"candidate_labels": labels}}
     r = requests.post(HF_URL, headers={"Authorization": f"Bearer {token}"},
                       json=payload, timeout=30)
     r.raise_for_status()
     scores = {item["label"]: item["score"] for item in r.json()}
     return scores.get(labels[1], 0.0)
+
+def performative_score(text, token):
+    """How performative and self-promotional the post reads (vs a humble personal story)."""
+    labels = ["humble authentic personal story",
+              "performative self-promotional corporate content"]
+    return zero_shot(text, labels, token)
+
+def generic_score(text, token):
+    """How much the post reads like generic AI filler (vs a specific personal experience)."""
+    labels = ["a specific personal experience",
+              "generic AI-generated filler"]
+    return zero_shot(text, labels, token)
+
+def score_ai_signals(text, token):
+    """Run each AI signal once and average them into one 0-1 slop 'vibe'."""
+    performative = performative_score(text, token)
+    generic      = generic_score(text, token)
+    return (performative + generic) / 2
 
 def main():
     # paste your own post between the triple quotes!
@@ -83,24 +114,15 @@ Culture is built when people care.
 Agree?
 #motivation #grindset #blessed"""
 
-    rules = rule_score(text)
-    hf = hf_performative_score(text, HF_TOKEN)
+    rules, offenses, signals = score_signals(text)
+    vibe = score_ai_signals(text, HF_TOKEN)
 
-    signals = {
-        "broetry": broetry_ratio(text),
-        "buzzwords": count_corporate_buzzwords(text),
-        "closers": engagement_bait(text),
-        "emoji_bullets": emoji_bullets(text),
-        "dashes": excess_dashes(text),
-        "anaphora": anaphora_hits(text),
-    }
-
-    if offense_count(signals) == 0:
+    if offenses == 0:
         # no tells flagged: lean on the AI alone, kept low
-        score = round(hf * 25)
+        score = round(vibe * 25)
     else:
         # scale the whole blend up to use the full range
-        score = round(min(100, (rules + hf * 40) * 1.4))
+        score = round(min(100, (rules + vibe * 40) * 1.4))
 
     if score >= 70:   label = "Certified Artisanal Slop 🥫"
     elif score >= 50: label = "Peak LinkedIn Cringe 💼"

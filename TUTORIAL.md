@@ -199,50 +199,60 @@ def emoji_bullets(text):
 
 A quick trick: `isascii()` is `True` only for plain English letters, digits, and basic punctuation, so it returns `False` for an emoji. That means a line *starting* with one usually gets flagged as a ✨ decorative ✨ bullet. It won't *only* catch emoji, an accented letter like `é` or a curly quote at the start trips it too, but for LinkedIn-style posts that's a good-enough tell.
 
-### Score the signals
+### Score the deterministic signals
 
-Now the [scoring function](https://en.wikipedia.org/wiki/Scoring_rule), `rule_score`. It calls each signal helper and turns them into a subscore out of 80. Each `min()` cap is that signal's weight, so no single tell can run away with the score.
-
-```python
-def rule_score(text):
-    score = min(20, broetry_ratio(text) * 28)
-    score += min(14, count_corporate_buzzwords(text) * 4)
-    score += min(12, engagement_bait(text) * 6)
-    score += min(12, emoji_bullets(text) * 2)
-    score += min(8, excess_dashes(text) * 3)
-    score += min(12, anaphora_hits(text) * 3)
-    return min(80, score)
-```
-
-Because each signal is its own function, this reads almost like a checklist: weight the broetry, the buzzwords, the engagement bait, the emoji bullets, the dashes, and the anaphora, cap each one, and add them up. These signals are *transparent*: you can see exactly why a post scored high.
-
-### Count the offenses tripped
-
-`rule_score` gave us one number for *how much* slop a post shows. To improve our slop verdict confidence, we also want to know *how many* signals were spotted. One signal maxing out can spike the score, but a post that trips multiple signals is more likely to be slop. `offense_count` defines a threshold and counts how many signals trip it.
+Now we turn those six signals into numbers. The trick is to call each helper **once**, store it in a variable, and reuse it for two jobs: a weighted **score** (*how much* slop) and an **offense count** (*how many* tells fired). We also pack the raw values into a `signals` dict so `main()` never has to call the helpers again.
 
 ```python
-def offense_count(signals):
-    flags = [
-        signals["broetry"] >= 0.4,
-        signals["buzzwords"] >= 1,
-        signals["closers"] >= 1,
-        signals["emoji_bullets"] >= 2,
-        signals["dashes"] > 0,
-        signals["anaphora"] >= 2,
-    ]
-    return sum(flags)
+def score_signals(text):
+    broetry   = broetry_ratio(text)
+    buzzwords = count_corporate_buzzwords(text)
+    closers   = engagement_bait(text)
+    emoji     = emoji_bullets(text)
+    dashes    = excess_dashes(text)
+    anaphora  = anaphora_hits(text)
+
+    score = min(20, broetry * 28)
+    score += min(14, buzzwords * 4)
+    score += min(12, closers * 6)
+    score += min(12, emoji * 2)
+    score += min(8, dashes * 3)
+    score += min(12, anaphora * 3)
+
+    offenses = sum([
+        broetry >= 0.4,
+        buzzwords >= 1,
+        closers >= 1,
+        emoji >= 2,
+        dashes > 0,
+        anaphora >= 2,
+    ])
+
+    signals = {
+        "broetry": broetry,
+        "buzzwords": buzzwords,
+        "closers": closers,
+        "emoji_bullets": emoji,
+        "dashes": dashes,
+        "anaphora": anaphora,
+    }
+    return min(80, score), offenses, signals
 ```
 
-Each line compares a signal to its threshold, so it lands on `True` or `False`. The neat part: [Python booleans are just integers](https://docs.python.org/3/library/functions.html#bool) (`True` is `1`, `False` is `0`), so `sum(flags)` counts how many tripped.
+**The score** is a weighted sum, capped at 80. Each `min()` cap is that signal's weight, so no single tell can run away with the score, and because every signal is its own variable you can see exactly why a post scored high.
+
+**The offense count** answers a different question: not *how big* the total is, but *how many* separate tells fired. One signal maxing out can spike the score, yet a post that trips several is the surer sign of slop. Each `>=` is a threshold check that lands on `True` or `False`, and because [Python booleans are just integers](https://docs.python.org/3/library/functions.html#bool) (`True` is `1`, `False` is `0`), `sum([...])` just counts how many tripped.
+
+We hand back all three: the capped score, the offense count, and the raw `signals` dict the card will use later.
 
 ### Create your non-deterministic signals
 
-Rules only go so far. To catch the *overall vibe* we'll use a [zero-shot classifier](https://en.wikipedia.org/wiki/Zero-shot_learning): a model that sorts text into labels *we invent on the spot*, no training needed. Unlike the deterministic helpers above, this signal comes from an AI model, so it can read meaning the rules miss. We hand it two labels and pull out the "performative" probability.
+Rules only go so far. To catch the *overall vibe* we'll use a [zero-shot classifier](https://en.wikipedia.org/wiki/Zero-shot_learning): a model that sorts text into labels *we invent on the spot*, no training needed. Unlike the deterministic helpers above, these signals come from an AI model, so they read meaning the rules miss.
+
+First, one small helper that makes the call. We hand the model the post plus two labels, and it returns a probability for each; we keep the second one (`labels[1]`, a number from 0 to 1):
 
 ```python
-def hf_performative_score(text, token):
-    labels = ["humble authentic personal story",
-              "performative self-promotional corporate content"]
+def zero_shot(text, labels, token):
     payload = {"inputs": text, "parameters": {"candidate_labels": labels}}
     r = requests.post(HF_URL, headers={"Authorization": f"Bearer {token}"},
                       json=payload, timeout=30)
@@ -251,14 +261,45 @@ def hf_performative_score(text, token):
     return scores.get(labels[1], 0.0)
 ```
 
-We `POST` the post text plus our two labels, and the model returns a probability for each. We grab the "performative" one (`labels[1]`, a number from 0 to 1). How does it work? The model was trained to judge whether one sentence *implies* another, so we're effectively asking "does this post imply the label 'performative content'?" That's the magic.
+How does it work? The model was trained to judge whether one sentence *implies* another, so we're effectively asking "does this post imply the label?" That's the magic.
+
+Now each AI signal is just a label pair handed to `zero_shot`, the same way each rule signal kept its word list inside. The first measures how *performative* the post reads:
+
+```python
+def performative_score(text, token):
+    labels = ["humble authentic personal story",
+              "performative self-promotional corporate content"]
+    return zero_shot(text, labels, token)
+```
+
+The second measures how much it sounds like *generic AI filler* rather than a specific human story:
+
+```python
+def generic_score(text, token):
+    labels = ["a specific personal experience",
+              "generic AI-generated filler"]
+    return zero_shot(text, labels, token)
+```
 
 > [!TIP]
-> **First-run tip:** free models "sleep" when idle, so your first request might take ~20 seconds while the model wakes up. Just run it again.
+> **First-run tip:** free models "sleep" when idle, so your first request might take ~20 seconds while the model wakes up. Just run it again. Each signal is its own call, so the first run can wake the model up twice.
+
+### Score the non-deterministic signals
+
+Just like `score_signals` did for the rules, one function runs each AI signal once and blends them, here a plain average into a single 0-1 "vibe":
+
+```python
+def score_ai_signals(text, token):
+    performative = performative_score(text, token)
+    generic      = generic_score(text, token)
+    return (performative + generic) / 2
+```
+
+Two label pairs, two probabilities, one number. To add a third signal later you touch two small places: a new `*_score` helper, and one more line here.
 
 ## Wire it all together
 
-`main()` ties everything together. It scores a sample post, builds the `signals` dict straight from our helper functions, then blends the two halves: if no offense boxes tripped, it trusts the AI alone (kept low), otherwise it scales the rules-plus-AI blend up by 1.4 to use the full range. A short `if`/`elif` ladder then turns the final number into a verdict label right where it's printed — no need to split that into its own function, it's easier to follow inline.
+`main()` ties everything together. It runs `score_signals` for the rule score (and offense count) and `score_ai_signals` for the AI vibe, then blends the two halves: if no signal tripped, it trusts the AI alone (kept low), otherwise it scales the rules-plus-AI blend up by 1.4 to use the full range. A short `if`/`elif` ladder then turns the final number into a verdict label right where it's printed — no need to split that into its own function, it's easier to follow inline.
 
 ```python
 def main():
@@ -271,22 +312,13 @@ Culture is built when people care.
 Agree?
 #motivation #grindset #blessed"""
 
-    rules = rule_score(text)
-    hf = hf_performative_score(text, HF_TOKEN)
+    rules, offenses, signals = score_signals(text)
+    vibe = score_ai_signals(text, HF_TOKEN)
 
-    signals = {
-        "broetry": broetry_ratio(text),
-        "buzzwords": count_corporate_buzzwords(text),
-        "closers": engagement_bait(text),
-        "emoji_bullets": emoji_bullets(text),
-        "dashes": excess_dashes(text),
-        "anaphora": anaphora_hits(text),
-    }
-
-    if offense_count(signals) == 0:
-        score = round(hf * 25)                            # no tells: lean on the AI, kept low
+    if offenses == 0:
+        score = round(vibe * 25)                            # no tells: lean on the AI, kept low
     else:
-        score = round(min(100, (rules + hf * 40) * 1.4))  # otherwise use the full range
+        score = round(min(100, (rules + vibe * 40) * 1.4))  # otherwise use the full range
 
     if score >= 70:   label = "Certified Artisanal Slop 🥫"
     elif score >= 50: label = "Peak LinkedIn Cringe 💼"
@@ -300,7 +332,7 @@ if __name__ == "__main__":
     main()
 ```
 
-Two ideas make this robust. The `signals` dict holds every raw signal, and `offense_count` reads it to gate the verdict: a post with zero tripped signals can't be slop, so we lean on the AI alone and keep the score low. Everything else gets the full blended score, scaled up so the mid-range fills in. To score a different post, just swap the text between the `"""` triple quotes.
+Two ideas make this robust. `score_signals` runs every deterministic signal once and hands back an offense count, which gates the verdict: a post with zero tripped signals can't be slop, so we lean on the AI alone and keep the score low. Everything else gets the full blended score, scaled up so the mid-range fills in. To score a different post, just swap the text between the `"""` triple quotes.
 
 ## Run the project
 
@@ -321,7 +353,7 @@ A terminal score is fun, but you want something to *post*. Grab two files from t
 - **[`card.py`](https://github.com/anp-exe/detect-ai-slop-tutorial/blob/main/card.py)**: the card generator
 - **[`NotoColorEmoji.ttf`](https://github.com/anp-exe/detect-ai-slop-tutorial/blob/main/NotoColorEmoji.ttf)**: the emoji font, so your card looks the same on every computer
 
-You already built the `signals` dict in `main()`, so the card just needs two lines. Add the import at the top of `slop.py`:
+`score_signals` already handed `main()` the `signals` dict, so the card just needs two lines. Add the import at the top of `slop.py`:
 
 ```python
 from card import make_card
@@ -348,7 +380,7 @@ Now more than ever, creativity is the thing that makes you stand out. When the b
 
 ## What Next?
 
-- **Tune the weights:** change the `min()` caps in `rule_score` and watch how the scores move. Which tells do you think deserve to matter most?
+- **Tune the weights:** change the `min()` caps in `score_signals` and watch how the scores move. Which tells do you think deserve to matter most?
 - **Beat your high score:** hunt your feed for the most egregious post you can find and see how close to 100 you can push it.
 - **Add your own signals:** detect the ALL CAPS WORDS or whatever tell drives *you* up the wall, then give it a weight and a card box.
 
