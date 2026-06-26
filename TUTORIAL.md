@@ -97,14 +97,18 @@ The **Inference API** runs AI models with a simple web request. No GPU, no downl
 
 ## Create an .env file
 
-Create a file called `.env` at the root of the project. This is where we place our token, on one line, no quotes:
+> [!TIP]
+> Add `.env` to your `.gitignore` so your token never reaches GitHub. Secrets live in `.env`, never exposed in the code.
+
+Create a dotfile called `.env` at the root of the project. This is where we place our token, on one line, no quotes:
 
 ```
 HF_TOKEN=hf_your_token_here
 ```
 
-> [!TIP]
-> Add `.env` to your `.gitignore` so your token never reaches GitHub. Secrets live in `.env`, never in the code.
+**I cannot see the dotfile I've created!**
+
+On Unix systems (e.g., MacOS and Linux), the dot makes them "hidden" by default. However, they're simply files you can view and edit that start with a dot (`.`). If you're unable to see them, it means you need to [make them visible on your file explorer](https://www.graphpad.com/support/faq/how-to-view-files-on-your-mac-that-are-normally-invisible/).
 
 ## Create the project file
 
