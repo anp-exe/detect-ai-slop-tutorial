@@ -1,5 +1,7 @@
 .env
 .venv
+# local scratch tester, kept out of the repo
+test.py
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
