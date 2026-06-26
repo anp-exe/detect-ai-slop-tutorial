@@ -17,9 +17,9 @@
 
 ## Introduction
 
-Ever heard of the **dead internet theory**? It's the idea that more and more of what we read online isn't written by 
-people at all but churned out by AI. Whether or not you buy the full conspiracy, one place it feels undeniably true 
-is **LinkedIn**. The feed has become ground zero for AI slop. "I got rejected 100 times. Then everything changed" 
+Ever heard of the **dead internet theory**? It's the idea that more and more of what we read online isn't written by
+people at all but churned out by AI. Whether or not you buy the full conspiracy, one place it feels undeniably true
+is **LinkedIn**. The feed has become ground zero for AI slop. "I got rejected 100 times. Then everything changed"
 broetry, the buzzword soup, the "Agree?" bait, all of it identical.
 
 In this tutorial we'll build a tool that gives any post a **Slop Score /100** with a verdict, then saves it as a shareable card. Along the way you'll learn how to use the **Hugging Face API** for **zero-shot text classification**, and how to blend AI judgment with your own transparent rules.
@@ -268,18 +268,7 @@ We `POST` the post text plus our two labels, and the model returns a probability
 
 ## Wire it all together
 
-First, one tiny self-explanatory helper that turns the final number into a label:
-
-```python
-def verdict(score):
-    if score >= 70: return "Certified Artisanal Slop 🥫"
-    if score >= 50: return "Peak LinkedIn Cringe 💼"
-    if score >= 30: return "Mildly Insufferable 😬"
-    if score >= 15: return "Suspiciously Normal 🤔"
-    return "An Actual Human Wrote This 😮"
-```
-
-Now `main()` ties everything together. It scores a sample post, builds the `signals` dict straight from our helper functions, then blends the two halves: if no offense boxes tripped, it trusts the AI alone (kept low), otherwise it scales the rules-plus-AI blend up by 1.4 to use the full range.
+`main()` ties everything together. It scores a sample post, builds the `signals` dict straight from our helper functions, then blends the two halves: if no offense boxes tripped, it trusts the AI alone (kept low), otherwise it scales the rules-plus-AI blend up by 1.4 to use the full range. A short `if`/`elif` ladder then turns the final number into a verdict label right where it's printed — no need to split that into its own function, it's easier to follow inline.
 
 ```python
 def main():
@@ -310,7 +299,13 @@ Agree?
     else:
         score = round(min(100, (rules + hf * 40) * 1.4))  # otherwise use the full range
 
-    print(f"\n  Slop Score: {score}/100  —  {verdict(score)}\n")
+    if score >= 70:   label = "Certified Artisanal Slop 🥫"
+    elif score >= 50: label = "Peak LinkedIn Cringe 💼"
+    elif score >= 30: label = "Mildly Insufferable 😬"
+    elif score >= 15: label = "Suspiciously Normal 🤔"
+    else:             label = "An Actual Human Wrote This 😮"
+
+    print(f"\n  Slop Score: {score}/100  —  {label}\n")
 
 if __name__ == "__main__":
     main()
