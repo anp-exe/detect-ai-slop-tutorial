@@ -43,7 +43,9 @@ python slop.py
 |------|--------------|
 | `slop.py` | The main detector: rule signals + Hugging Face scoring |
 | `card.py` | Draws the shareable score card with Pillow |
-| `TUTORIAL.md` | The full step-by-step write-up |
+| `NotoColorEmoji.ttf` | Emoji font so the card looks the same on every computer |
+| `TUTORIAL.md` | The full step-by-step build tutorial |
+| `WRITE-UP.md` | Behind the scenes: how the idea came together and the challenges I hit |
 | `images/` | Screenshots and example cards used in the tutorial |
 
 ## More resources
