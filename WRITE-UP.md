@@ -10,7 +10,7 @@
 flowchart TD
     A[Read the challenge brief] --> B{Brainstorm}
     B --> C[♟Idea: AI chess opening coach]
-    C -->|too complex for beginners,<br/>and AI is bad at chess| D[❌ Scrapped]
+    C -->|too complex for beginners,<br/>and GPT Models are bad at chess| D[❌ Scrapped]
     D --> E[Stuck: Brainstorming phase again]
     E --> F[Downloaded LinkedIn for the internship hunt]
     F --> G[The feed is wall-to-wall AI slop]
