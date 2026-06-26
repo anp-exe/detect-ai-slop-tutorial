@@ -8,24 +8,24 @@
 
 ```mermaid
 flowchart TD
-    A[📋 Read the challenge brief] --> B{Brainstorm}
-    B --> C[♟️ Idea: AI chess opening coach]
+    A[Read the challenge brief] --> B{Brainstorm}
+    B --> C[♟Idea: AI chess opening coach]
     C -->|too complex for beginners,<br/>and AI is bad at chess| D[❌ Scrapped]
     D --> E[Stuck: Brainstorming phase again]
     E --> F[Downloaded LinkedIn for the internship hunt]
-    F --> G[🤖 The feed is wall-to-wall AI slop]
-    G --> H[✨ The new 'humanness' prize category clicks]
-    H --> I([💡 The LinkedIn Slop Detector])
-    I --> J[⚙️ Build: 50/50 rules + Hugging Face AI]
-    J --> K[🎴 Add an optional shareable card]
+    F --> G[The feed is wall-to-wall AI slop]
+    G --> H[The new 'humanness' prize category clicks]
+    H --> I([The LinkedIn Slop Detector])
+    I --> J[⚙Build: 50/50 rules + Hugging Face AI]
+    J --> K[Add an optional shareable card]
     K --> L{Challenges}
-    L --> M[🍞 Broetry bug on short posts<br/>→ require 6+ lines]
-    L --> N[📦 Code blocks too big<br/>→ bite-sized chunks]
-    M --> O[🎨 Figma: trading cards, cover & banner]
+    L --> M[Broetry bug on short posts<br/>→ require 6+ lines]
+    L --> N[Code blocks too big<br/>→ bite-sized chunks]
+    M --> O[Figma: trading cards, cover & banner]
     N --> O
-    O --> P[🧪 Test runs, weight tuning, friend feedback]
-    P --> Q[🧹 Tidy the repo: README + TUTORIAL.md + images]
-    Q --> R([🚀 Submitted! ~14 hours])
+    O --> P[Test runs, weight tuning, friend feedback]
+    P --> Q[Tidy the repo: README + TUTORIAL.md + images]
+    Q --> R([Submitted! ~14 hours])
 ```
 
 ---
@@ -122,5 +122,3 @@ I tidied the repo: a **README** explaining the project with links right at the b
 What a journey. Roughly **14 hours** on this project, according to WakaTime.
 
 ---
-
-> **Takeaway:** When the baseline is an infinite scroll of interchangeable AI posts, a genuine voice cuts straight through. Build, write, and post like a real person.
